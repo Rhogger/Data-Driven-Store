@@ -14,5 +14,15 @@
     "@tsconfig/node24": "^24.0.1",
     "@types/node": "^24.0.10",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@fastify/swagger": "^9.5.1",
+    "@fastify/swagger-ui": "^5.2.3",
+    "cassandra-driver": "^4.8.0",
+    "fastify": "^5.4.0",
+    "mongodb": "^6.17.0",
+    "neo4j-driver": "^5.28.1",
+    "pg": "^8.16.3",
+    "redis": "^5.5.6"
   }
 }
