@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # PostgreSQL
+  postgres:
+    image: postgres:14-alpine
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: datadriven_store
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - datastore-network
+    restart: unless-stopped
+
+  # MongoDB
+  mongo:
+    image: mongo:6.0
+    container_name: mongo_db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - datastore-network
+    restart: unless-stopped
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - datastore-network
+    restart: unless-stopped
+
+  # Cassandra
+  cassandra:
+    image: cassandra:4.0
+    container_name: cassandra_db
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    networks:
+      - datastore-network
+    restart: unless-stopped
+
+  # Neo4j
+  neo4j:
+    image: neo4j:5.7
+    container_name: neo4j_db
+    environment:
+      NEO4J_AUTH: neo4j/admin
+    ports:
+      - "7474:7474" 
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - datastore-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+  cassandra_data:
+  neo4j_data:
+
+networks:
+  datastore-network:
+    driver: bridge
