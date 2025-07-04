@@ -16,20 +16,20 @@ services:
       - datastore-network
     restart: unless-stopped
 
-  # # MongoDB
-  # mongo:
-  #   image: mongo:6.0
-  #   container_name: mongo_db
-  #   environment:
-  #     MONGO_INITDB_ROOT_USERNAME: admin
-  #     MONGO_INITDB_ROOT_PASSWORD: admin
-  #   ports:
-  #     - "27017:27017"
-  #   volumes:
-  #     - mongo_data:/data/db
-  #   networks:
-  #     - datastore-network
-  #   restart: unless-stopped
+  # MongoDB
+  mongo:
+    image: mongo:6.0
+    container_name: mongo_db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - datastore-network
+    restart: unless-stopped
 
   # # Redis
   # redis:
@@ -87,9 +87,12 @@ services:
       PG_HOST: postgres
       PG_PORT: 5432
 
+      MONGODB_URI: mongodb://admin:admin@mongo:27017
+      MONGODB_DATABASE: data_driven_store
+
     depends_on:
       - postgres
-      # - mongo
+      - mongo
       # - redis
       # - cassandra
       # - neo4j
@@ -98,12 +101,12 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-    command: pnpm run dev
+    command: ['/bin/sh', './run.sh']
     restart: unless-stopped
 
 volumes:
   postgres_data:
-  # mongo_data:
+  mongo_data:
   # redis_data:
   # cassandra_data:
   # neo4j_data:

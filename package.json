@@ -8,7 +8,6 @@
     "clean": "rm -rf dist || sudo rm -rf dist",
     "build": "./build.sh",
     "start": "node dist/index.js",
-    "start:dev": "./start-dev.sh",
     "reset": "./reset.sh",
     "copy:assets": "copyfiles --up 1 \"src/**/*.{sql,cql,cypher,json}\" dist",
     "dev": "pnpm run build && pnpm run start",
