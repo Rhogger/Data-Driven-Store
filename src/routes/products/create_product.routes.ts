@@ -2,12 +2,15 @@ import { FastifyPluginAsync } from 'fastify';
 import { ProductRepository } from '@repositories/mongodb/ProductRepository';
 
 interface CreateProductInput {
-  name: string;
-  description?: string;
-  price: number;
-  categoryId: string;
-  stock: number;
-  tags?: string[];
+  nome: string;
+  descricao?: string;
+  marca?: string;
+  preco: number;
+  id_categoria: number;
+  estoque: number;
+  reservado?: number;
+  atributos?: Record<string, any>;
+  avaliacoes?: Record<string, any>;
 }
 
 const createProductRoutes: FastifyPluginAsync = async (fastify) => {
@@ -15,19 +18,34 @@ const createProductRoutes: FastifyPluginAsync = async (fastify) => {
     Body: CreateProductInput;
   }>('/products', async (request, reply) => {
     try {
-      const { price, stock } = request.body;
+      const { preco, estoque, reservado } = request.body;
 
-      if (price <= 0) {
+      // Validações diretas na rota
+      if (preco <= 0) {
         return reply.status(400).send({
           success: false,
           error: 'Preço deve ser maior que zero',
         });
       }
 
-      if (stock < 0) {
+      if (estoque < 0) {
         return reply.status(400).send({
           success: false,
           error: 'Estoque não pode ser negativo',
+        });
+      }
+
+      if (reservado !== undefined && reservado < 0) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Quantidade reservada não pode ser negativa',
+        });
+      }
+
+      if (reservado !== undefined && reservado > estoque) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Quantidade reservada não pode ser maior que o estoque',
         });
       }
 

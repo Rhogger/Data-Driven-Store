@@ -3,14 +3,18 @@ import { ObjectId } from 'mongodb';
 
 export interface Product {
   _id?: ObjectId;
-  name: string;
-  description?: string;
-  price: number;
-  categoryId: string;
-  stock: number;
-  tags?: string[];
-  createdAt?: Date;
-  updatedAt?: Date;
+  nome: string;
+  descricao?: string;
+  marca?: string;
+  preco: number;
+  id_categoria: number;
+  estoque: number;
+  reservado?: number;
+  disponivel?: number;
+  atributos?: Record<string, any>;
+  avaliacoes?: Record<string, any>;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export class ProductRepository {
@@ -20,12 +24,19 @@ export class ProductRepository {
     return this.fastify.mongodb.db.collection<Product>('products');
   }
 
-  async create(product: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>): Promise<Product> {
+  async create(
+    product: Omit<Product, '_id' | 'created_at' | 'updated_at' | 'disponivel'>,
+  ): Promise<Product> {
     const now = new Date();
+    const reservado = product.reservado || 0;
+    const disponivel = product.estoque - reservado;
+
     const productToInsert: Omit<Product, '_id'> = {
       ...product,
-      createdAt: now,
-      updatedAt: now,
+      reservado,
+      disponivel,
+      created_at: now,
+      updated_at: now,
     };
 
     const result = await this.collection.insertOne(productToInsert);
@@ -41,26 +52,42 @@ export class ProductRepository {
   }
 
   async findAll(limit = 10, skip = 0): Promise<Product[]> {
-    return await this.collection.find({}).limit(limit).skip(skip).sort({ createdAt: -1 }).toArray();
-  }
-
-  async findByCategoryId(categoryId: string, limit = 10): Promise<Product[]> {
     return await this.collection
-      .find({ categoryId })
+      .find({})
       .limit(limit)
-      .sort({ createdAt: -1 })
+      .skip(skip)
+      .sort({ created_at: -1 })
       .toArray();
   }
 
-  async update(id: string, update: Partial<Omit<Product, '_id'>>): Promise<Product | null> {
+  async findByCategoryId(id_categoria: number, limit = 10): Promise<Product[]> {
+    return await this.collection
+      .find({ id_categoria })
+      .limit(limit)
+      .sort({ created_at: -1 })
+      .toArray();
+  }
+
+  async update(
+    id: string,
+    update: Partial<Omit<Product, '_id' | 'disponivel'>>,
+  ): Promise<Product | null> {
+    // Se estoque ou reservado for alterado, recalcular disponivel
+    const updateData: any = { ...update, updated_at: new Date() };
+
+    if (update.estoque !== undefined || update.reservado !== undefined) {
+      // Buscar produto atual para obter valores existentes
+      const currentProduct = await this.collection.findOne({ _id: new ObjectId(id) });
+      if (currentProduct) {
+        const novoEstoque = update.estoque ?? currentProduct.estoque;
+        const novoReservado = update.reservado ?? currentProduct.reservado ?? 0;
+        updateData.disponivel = novoEstoque - novoReservado;
+      }
+    }
+
     const result = await this.collection.findOneAndUpdate(
       { _id: new ObjectId(id) },
-      {
-        $set: {
-          ...update,
-          updatedAt: new Date(),
-        },
-      },
+      { $set: updateData },
       { returnDocument: 'after' },
     );
 
@@ -75,10 +102,10 @@ export class ProductRepository {
   async searchByName(searchTerm: string, limit = 10): Promise<Product[]> {
     return await this.collection
       .find({
-        name: { $regex: searchTerm, $options: 'i' },
+        nome: { $regex: searchTerm, $options: 'i' },
       })
       .limit(limit)
-      .sort({ createdAt: -1 })
+      .sort({ created_at: -1 })
       .toArray();
   }
 
@@ -88,16 +115,16 @@ export class ProductRepository {
         tags: { $in: tags },
       })
       .limit(limit)
-      .sort({ createdAt: -1 })
+      .sort({ created_at: -1 })
       .toArray();
   }
 
-  async countByCategory(): Promise<Array<{ _id: string; count: number }>> {
+  async countByCategory(): Promise<Array<{ _id: number; count: number }>> {
     const result = await this.collection
       .aggregate([
         {
           $group: {
-            _id: '$categoryId',
+            _id: '$id_categoria',
             count: { $sum: 1 },
           },
         },
@@ -107,6 +134,35 @@ export class ProductRepository {
       ])
       .toArray();
 
-    return result as Array<{ _id: string; count: number }>;
+    return result as Array<{ _id: number; count: number }>;
+  }
+
+  // Método específico para atualizar quantidade reservada (para pedidos)
+  async updateReservedQuantity(id: string, quantidadeReservada: number): Promise<Product | null> {
+    const currentProduct = await this.collection.findOne({ _id: new ObjectId(id) });
+    if (!currentProduct) {
+      return null;
+    }
+
+    const novoReservado = quantidadeReservada;
+    const disponivel = currentProduct.estoque - novoReservado;
+
+    if (disponivel < 0) {
+      throw new Error('Quantidade reservada não pode ser maior que o estoque disponível');
+    }
+
+    const result = await this.collection.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          reservado: novoReservado,
+          disponivel: disponivel,
+          updated_at: new Date(),
+        },
+      },
+      { returnDocument: 'after' },
+    );
+
+    return result;
   }
 }

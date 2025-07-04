@@ -30,15 +30,13 @@ print(`✅ Usuário da aplicação '${appUser}' criado com sucesso no banco '${d
 print('📦 Configurando collection products...');
 
 // Criar indexes para otimizar consultas
-db.products.createIndex({ categoryId: 1 }, { name: 'idx_products_categoryId' });
-db.products.createIndex(
-  { name: 'text', description: 'text' },
-  { name: 'idx_products_text_search' },
-);
-db.products.createIndex({ tags: 1 }, { name: 'idx_products_tags' });
-db.products.createIndex({ price: 1 }, { name: 'idx_products_price' });
-db.products.createIndex({ stock: 1 }, { name: 'idx_products_stock' });
-db.products.createIndex({ createdAt: -1 }, { name: 'idx_products_created_desc' });
+db.products.createIndex({ id_categoria: 1 }, { name: 'idx_products_id_categoria' });
+db.products.createIndex({ nome: 'text', descricao: 'text' }, { name: 'idx_products_text_search' });
+db.products.createIndex({ marca: 1 }, { name: 'idx_products_marca' });
+db.products.createIndex({ preco: 1 }, { name: 'idx_products_preco' });
+db.products.createIndex({ estoque: 1 }, { name: 'idx_products_estoque' });
+db.products.createIndex({ disponivel: 1 }, { name: 'idx_products_disponivel' });
+db.products.createIndex({ created_at: -1 }, { name: 'idx_products_created_desc' });
 
 // Validação de schema para products
 db.runCommand({
@@ -46,46 +44,62 @@ db.runCommand({
   validator: {
     $jsonSchema: {
       bsonType: 'object',
-      required: ['name', 'price', 'categoryId', 'stock'],
+      required: ['nome', 'preco', 'id_categoria', 'estoque'],
       properties: {
-        name: {
+        nome: {
           bsonType: 'string',
           minLength: 1,
           maxLength: 200,
           description: 'Nome do produto é obrigatório e deve ter entre 1 e 200 caracteres',
         },
-        description: {
+        descricao: {
           bsonType: 'string',
           maxLength: 1000,
           description: 'Descrição opcional com máximo de 1000 caracteres',
         },
-        price: {
-          bsonType: 'double',
+        marca: {
+          bsonType: 'string',
+          maxLength: 100,
+          description: 'Marca do produto',
+        },
+        preco: {
+          bsonType: ['double', 'decimal'],
           minimum: 0,
           description: 'Preço deve ser um número positivo',
         },
-        categoryId: {
-          bsonType: 'string',
-          minLength: 1,
-          description: 'ID da categoria é obrigatório',
+        id_categoria: {
+          bsonType: 'int',
+          minimum: 1,
+          description: 'ID da categoria é obrigatório e deve ser um inteiro positivo',
         },
-        stock: {
+        estoque: {
           bsonType: 'int',
           minimum: 0,
-          description: 'Estoque deve ser um número inteiro não negativo',
+          description: 'Quantidade total de produtos no estoque',
         },
-        tags: {
-          bsonType: 'array',
-          items: {
-            bsonType: 'string',
-          },
-          description: 'Tags devem ser um array de strings',
+        reservado: {
+          bsonType: 'int',
+          minimum: 0,
+          description: 'Quantidade de produtos reservados por clientes',
         },
-        createdAt: {
+        disponivel: {
+          bsonType: 'int',
+          minimum: 0,
+          description: 'Quantidade disponível (estoque - reservado) - calculado automaticamente',
+        },
+        atributos: {
+          bsonType: 'object',
+          description: 'Documento com atributos específicos do produto (ex: cor, tamanho, etc)',
+        },
+        avaliacoes: {
+          bsonType: 'object',
+          description: 'Documento com informações de avaliações do produto',
+        },
+        created_at: {
           bsonType: 'date',
           description: 'Data de criação',
         },
-        updatedAt: {
+        updated_at: {
           bsonType: 'date',
           description: 'Data de atualização',
         },
