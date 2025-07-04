@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { CategoryService } from '@services/categories/CategoryService';
+import { CategoryRepository } from '@repositories/postgres/CategoryRepository';
 
 interface CreateCategoryBody {
   nome: string;
@@ -13,9 +13,15 @@ async function createCategoryHandler(
   const { nome } = request.body;
 
   try {
-    const categoryService = new CategoryService(this);
+    // Validação direta na rota
+    if (!nome || nome.trim() === '') {
+      return reply.code(400).send({
+        message: 'O nome da categoria não pode ser vazio.',
+      });
+    }
 
-    const newCategory = await categoryService.createCategory(nome);
+    const categoryRepository = new CategoryRepository(this);
+    const newCategory = await categoryRepository.create(nome);
 
     reply.code(201).send(newCategory);
   } catch (error) {
