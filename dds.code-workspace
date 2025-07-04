@@ -26,10 +26,5 @@
       "redhat.vscode-yaml",
       "oderwat.indent-rainbow"
     ]
-  },
-  "folders.exclude": {
-    "node_modules": true,
-    "dist": true,
-    ".vscode": true
   }
 }

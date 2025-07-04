@@ -1,0 +1,42 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint",
+    "prettier"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ],
+  "env": {
+    "node": true,
+    "es6": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "module"
+  },
+  "rules": {
+    // Regras gerais do ESLint (pode sobrescrever padrões)
+    "indent": ["error", 2], // Força indentação de 2 espaços
+    "linebreak-style": ["error", "unix"], // Força quebras de linha estilo Unix
+    "quotes": ["error", "single"], // Força aspas simples
+    "semi": ["error", "always"], // Força ponto e vírgula no final das instruções
+    "no-console": "warn", // Avisa sobre uso de console.log
+    "no-trailing-spaces": "error", // Proíbe espaços em branco no final das linhas
+    "comma-dangle": ["error", "always-multiline"], // Exige vírgula pendente em multiline
+
+    // Regras do TypeScript-ESLint (específicas para TS)
+    "@typescript-eslint/explicit-module-boundary-types": "off", // Desabilita exigir tipos de retorno para funções exportadas
+    "@typescript-eslint/no-explicit-any": "off", // Permite o uso de 'any' (pode ativar depois para ser mais rigoroso)
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }], // Avisa sobre variáveis não usadas (ignora as que começam com _)
+    "@typescript-eslint/no-var-requires": "off", // Permite 'require()' (útil para dotenv no index.ts)
+    "@typescript-eslint/no-empty-function": "off", // Permite funções vazias
+
+    // Regras do Prettier para serem reportadas pelo ESLint
+    "prettier/prettier": ["error", { "endOfLine": "lf" }] // Regras do Prettier (LF para quebras de linha)
+  }
+}
