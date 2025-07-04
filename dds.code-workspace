@@ -1,0 +1,35 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+      ".env": "${capture}.env.container", // Agrupa .env.example e container.env abaixo de .env
+      "package.json": ".npmrc, .pnpmrc, package-lock.json, pnpm-lock.yaml, .gitignore, .tool-versions, tsconfig.json, docker-compose.yml, Dockerfile, .dockerignore, dds.code-workspace", // Agrupa lockfiles e configs de pacote
+      "start.sh": "reset.sh" // Agrupa arquivos Docker
+    },
+
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "eslint.enable": true,
+    "eslint.lintOnSave": "onSave",
+    "typescript.updateImportsOnFileMove.enabled": "always",
+
+    "extensions.recommendations": [
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "ms-vscode.vscode-typescript-next",
+      "ms-azuretools.vscode-docker",
+      "redhat.vscode-yaml",
+      "oderwat.indent-rainbow"
+    ]
+  },
+  "folders.exclude": {
+    "node_modules": true,
+    "dist": true,
+    ".vscode": true
+  }
+}
