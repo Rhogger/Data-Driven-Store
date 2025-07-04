@@ -11,7 +11,7 @@ declare module 'fastify' {
   }
 }
 
-const postgresConnector: FastifyPluginAsync = async (fastify, opts) => {
+const postgresConnector: FastifyPluginAsync = async (fastify, _opts) => {
   const pgClient = new PostgresClient(databaseConfig.postgres);
 
   try {
