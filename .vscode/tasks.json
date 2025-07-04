@@ -1,0 +1,140 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🏗️ Build Project",
+      "type": "shell",
+      "command": "./build.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$tsc"],
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "🚀 Start Dev Server",
+      "type": "shell",
+      "command": "./start-dev.sh",
+      "group": "test",
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": {
+        "owner": "typescript",
+        "pattern": {
+          "regexp": "^([^\\s].*)\\((\\d+|\\d+,\\d+|\\d+,\\d+,\\d+,\\d+)\\):\\s+(error|warning|info)\\s+(TS\\d+)\\s*:\\s*(.*)$",
+          "file": 1,
+          "location": 2,
+          "severity": 3,
+          "code": 4,
+          "message": 5
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "🚀 Iniciando servidor...",
+          "endsPattern": "Server listening at"
+        }
+      }
+    },
+    {
+      "label": "🔄 Start (Simple)",
+      "type": "shell",
+      "command": "node",
+      "args": ["dist/index.js"],
+      "group": "test",
+      "isBackground": true,
+      "dependsOn": "🏗️ Build Project",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "🔥 Reset Docker Environment",
+      "type": "shell",
+      "command": "./reset.sh",
+      "group": "test",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": true
+      },
+      "options": {
+        "statusbar": {
+          "label": "Reset Docker"
+        }
+      }
+    },
+    {
+      "label": "🧹 Clean Build",
+      "type": "shell",
+      "command": "rm",
+      "args": ["-rf", "dist"],
+      "group": "build",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      }
+    },
+    {
+      "label": "🎨 Format Code",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "format"],
+      "group": "build",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "🗄️ Format SQL Files",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "format:sql"],
+      "group": "build",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    }
+  ]
+}

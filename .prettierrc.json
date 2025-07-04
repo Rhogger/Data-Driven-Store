@@ -5,21 +5,5 @@
   "printWidth": 100,
   "tabWidth": 2,
   "semi": true,
-  "endOfLine": "lf",
-  "plugins": [
-    "prettier-plugin-sql"
-  ],
-  "overrides": [
-    {
-      "files": "*.sql",
-      "options": {
-        "parser": "sql",
-        "language": "postgresql",
-        "keywordCase": "upper",
-        "identifierCase": "lower",
-        "functionCase": "upper",
-        "tabWidth": 2
-      }
-    }
-  ]
+  "endOfLine": "lf"
 }

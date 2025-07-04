@@ -9,7 +9,7 @@ DO $$ BEGIN
         CREATE TYPE STATUS_PEDIDO AS ENUM (
             'Pendente',
             'Processando',
-            'Enviado',
+                            'Enviado',
             'Entregue',
             'Cancelado'
         );

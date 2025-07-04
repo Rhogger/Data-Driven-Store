@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "resolveJsonModule": true, 
+    "resolveJsonModule": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "declaration": false,
@@ -18,9 +18,6 @@
       "@services/*": ["services/*"]
     }
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.sql"
-  ],
+  "include": ["src/**/*.ts", "src/**/*.sql"],
   "exclude": ["node_modules", "dist"]
 }

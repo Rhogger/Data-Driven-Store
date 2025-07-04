@@ -1,15 +1,15 @@
 {
   "folders": [
     {
-      "path": "."
-    }
+      "path": ".",
+    },
   ],
   "settings": {
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {
       ".env": "${capture}.env.container", // Agrupa .env.example e container.env abaixo de .env
-      "package.json": ".npmrc, .pnpmrc, package-lock.json, pnpm-lock.yaml, .gitignore, .tool-versions, tsconfig.json, docker-compose.yml, Dockerfile, .dockerignore, dds.code-workspace, .prettierrc.json, eslint.config.js", // Agrupa lockfiles e configs de pacote
-      "start.sh": "reset.sh" // Agrupa arquivos Docker
+      "package.json": ".npmrc, .pnpmrc, package-lock.json, pnpm-lock.yaml, .gitignore, .tool-versions, tsconfig.json, docker-compose.yml, Dockerfile, .dockerignore, dds.code-workspace, .prettierrc.json, eslint.config.js, .editorconfig", // Agrupa lockfiles e configs de pacote
+      "start.sh": "start-dev.sh, reset.sh, build.sh", // Agrupa arquivos Docker
     },
 
     "editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -18,13 +18,17 @@
     "eslint.lintOnSave": "onSave",
     "typescript.updateImportsOnFileMove.enabled": "always",
 
+    "files.exclude": {
+      "**/node_modules": true,
+    },
+
     "extensions.recommendations": [
       "esbenp.prettier-vscode",
       "dbaeumer.vscode-eslint",
       "ms-vscode.vscode-typescript-next",
       "ms-azuretools.vscode-docker",
       "redhat.vscode-yaml",
-      "oderwat.indent-rainbow"
-    ]
-  }
+      "oderwat.indent-rainbow",
+    ],
+  },
 }
