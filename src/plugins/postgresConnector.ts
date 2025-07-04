@@ -1,22 +1,22 @@
 import { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 
-import { Client as PostgresClient } from 'pg';
+import { Pool } from 'pg';
 
 import { databaseConfig } from '@config/database';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    pg: PostgresClient;
+    pg: Pool;
   }
 }
 
-const postgresConnector: FastifyPluginAsync = async (fastify, opts) => {
-  const pgClient = new PostgresClient(databaseConfig.postgres);
+const postgresConnector: FastifyPluginAsync = async (fastify, _opts) => {
+  const pool = new Pool(databaseConfig.postgres);
 
   try {
-    await pgClient.connect();
-    fastify.decorate('pg', pgClient);
+    await pool.query('SELECT NOW()');
+    fastify.decorate('pg', pool);
     fastify.log.info('Conectado ao PostgreSQL!');
   } catch (err) {
     fastify.log.error('Erro ao conectar ao PostgreSQL:', err);
@@ -24,9 +24,9 @@ const postgresConnector: FastifyPluginAsync = async (fastify, opts) => {
   }
 
   fastify.addHook('onClose', async (instance) => {
-    fastify.log.info('Fechando conexão com PostgreSQL...');
+    fastify.log.info('Fechando pool de conexões com PostgreSQL...');
     await instance.pg.end();
-    fastify.log.info('Conexão com PostgreSQL fechada.');
+    fastify.log.info('Pool de conexões com PostgreSQL fechado.');
   });
 };
 
