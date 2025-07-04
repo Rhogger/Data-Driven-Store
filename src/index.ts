@@ -1,6 +1,7 @@
+import 'dotenv/config';
 import app from './app';
 
-const PORT = process.env.API_PORT ? parseInt(process.env.API_PORT) : 3000;
+const PORT = process.env.APP_PORT ? parseInt(process.env.APP_PORT) : 3000;
 
 const start = async () => {
   try {

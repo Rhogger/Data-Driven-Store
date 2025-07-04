@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-"scripts": {
-    "build": "tsc",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "pnpm run clean && tsc",
     "start": "node dist/index.js",
+    "copy:assets": "copyfiles --up 1 \"src/**/*.{sql,cql,cypher,json}\" dist",
     "dev": "npm run build && npm run start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,13 +18,18 @@
   "devDependencies": {
     "@tsconfig/node24": "^24.0.1",
     "@types/node": "^24.0.10",
+    "@types/pg": "^8.15.4",
+    "copyfiles": "^2.4.1",
+    "rimraf": "^6.0.1",
     "typescript": "^5.8.3"
   },
   "dependencies": {
     "@fastify/swagger": "^9.5.1",
     "@fastify/swagger-ui": "^5.2.3",
     "cassandra-driver": "^4.8.0",
+    "dotenv": "^17.0.1",
     "fastify": "^5.4.0",
+    "fastify-plugin": "^5.0.1",
     "mongodb": "^6.17.0",
     "neo4j-driver": "^5.28.1",
     "pg": "^8.16.3",

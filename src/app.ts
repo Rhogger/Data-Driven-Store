@@ -1,11 +1,13 @@
 import Fastify from 'fastify';
+import postgresConnector from './plugins/postgresConnector';
+import apiRoutes from './routes/index';
 
 const app = Fastify({
   logger: true
 });
 
-app.get('/health', async (request, reply) => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
-});
+app.register(postgresConnector);
+
+app.register(apiRoutes, {prefix: '/api'});
 
 export default app;
