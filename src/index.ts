@@ -1,5 +1,4 @@
-import 'dotenv/config';
-import app from './app';
+import app from '@/app';
 
 const PORT = process.env.APP_PORT ? parseInt(process.env.APP_PORT) : 3000;
 
@@ -9,7 +8,7 @@ const start = async () => {
     console.log(`Servidor Fastify rodando em http://localhost:${PORT}`);
   } catch (err) {
     app.log.error(err);
-    process.exit(1); 
+    process.exit(1);
   }
 };
 

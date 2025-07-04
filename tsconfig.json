@@ -7,7 +7,16 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "declaration": false,
-    "noEmit": false
+    "noEmit": false,
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["./*"],
+      "@config/*": ["config/*"],
+      "@plugins/*": ["plugins/*"],
+      "@repositories/*": ["repositories/*"],
+      "@routes/*": ["routes/*"],
+      "@services/*": ["services/*"]
+    }
   },
   "include": [
     "src/**/*.ts",

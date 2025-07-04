@@ -1,11 +1,15 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { CategoryService } from '../../services/categories/CategoryService';
+import { CategoryService } from '@services/categories/CategoryService';
 
 interface CreateCategoryBody {
   nome: string;
 }
 
-async function createCategoryHandler(this: FastifyInstance, request: FastifyRequest<{ Body: CreateCategoryBody }>, reply: FastifyReply) {
+async function createCategoryHandler(
+  this: FastifyInstance,
+  request: FastifyRequest<{ Body: CreateCategoryBody }>,
+  reply: FastifyReply,
+) {
   const { nome } = request.body;
 
   try {

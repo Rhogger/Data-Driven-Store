@@ -1,9 +1,9 @@
 import { FastifyPluginAsync } from 'fastify';
-import fp from 'fastify-plugin'; 
+import fp from 'fastify-plugin';
 
 import { Client as PostgresClient } from 'pg';
 
-import { databaseConfig } from '../config/database';
+import { databaseConfig } from '@config/database';
 
 declare module 'fastify' {
   interface FastifyInstance {

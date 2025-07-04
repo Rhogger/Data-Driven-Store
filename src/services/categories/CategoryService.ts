@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { CategoryRepository } from '../../repositories/postgres/CategoryRepository';
+import { CategoryRepository } from '@repositories/postgres/CategoryRepository';
 
 interface Category {
   id_categoria: number;

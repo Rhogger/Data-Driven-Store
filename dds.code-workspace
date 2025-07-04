@@ -8,7 +8,7 @@
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {
       ".env": "${capture}.env.container", // Agrupa .env.example e container.env abaixo de .env
-      "package.json": ".npmrc, .pnpmrc, package-lock.json, pnpm-lock.yaml, .gitignore, .tool-versions, tsconfig.json, docker-compose.yml, Dockerfile, .dockerignore, dds.code-workspace", // Agrupa lockfiles e configs de pacote
+      "package.json": ".npmrc, .pnpmrc, package-lock.json, pnpm-lock.yaml, .gitignore, .tool-versions, tsconfig.json, docker-compose.yml, Dockerfile, .dockerignore, dds.code-workspace, .prettierrc.json, eslint.config.js", // Agrupa lockfiles e configs de pacote
       "start.sh": "reset.sh" // Agrupa arquivos Docker
     },
 
