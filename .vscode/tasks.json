@@ -21,9 +21,9 @@
       }
     },
     {
-      "label": "🚀 Start Dev Server",
+      "label": "🚀 Start Docker Environment",
       "type": "shell",
-      "command": "./start-dev.sh",
+      "command": "./start.sh",
       "group": "test",
       "isBackground": true,
       "presentation": {
@@ -32,40 +32,20 @@
         "focus": true,
         "panel": "new",
         "showReuseMessage": true,
-        "clear": false
+        "clear": true
       },
       "problemMatcher": {
-        "owner": "typescript",
+        "owner": "docker",
         "pattern": {
-          "regexp": "^([^\\s].*)\\((\\d+|\\d+,\\d+|\\d+,\\d+,\\d+,\\d+)\\):\\s+(error|warning|info)\\s+(TS\\d+)\\s*:\\s*(.*)$",
-          "file": 1,
-          "location": 2,
-          "severity": 3,
-          "code": 4,
-          "message": 5
+          "regexp": "^(ERRO|ERROR):\\s*(.*)$",
+          "severity": 1,
+          "message": 2
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "🚀 Iniciando servidor...",
+          "beginsPattern": "--- Iniciando ambiente de desenvolvimento Docker ---",
           "endsPattern": "Server listening at"
         }
-      }
-    },
-    {
-      "label": "🔄 Start (Simple)",
-      "type": "shell",
-      "command": "node",
-      "args": ["dist/index.js"],
-      "group": "test",
-      "isBackground": true,
-      "dependsOn": "🏗️ Build Project",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "new",
-        "showReuseMessage": true,
-        "clear": false
       }
     },
     {
@@ -89,23 +69,7 @@
       }
     },
     {
-      "label": "🧹 Clean Build",
-      "type": "shell",
-      "command": "rm",
-      "args": ["-rf", "dist"],
-      "group": "build",
-      "isBackground": false,
-      "presentation": {
-        "echo": true,
-        "reveal": "silent",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": false,
-        "clear": false
-      }
-    },
-    {
-      "label": "🎨 Format Code",
+      "label": "🎨 Format Project",
       "type": "shell",
       "command": "pnpm",
       "args": ["run", "format"],
@@ -114,22 +78,6 @@
       "presentation": {
         "echo": true,
         "reveal": "silent",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      }
-    },
-    {
-      "label": "🗄️ Format SQL Files",
-      "type": "shell",
-      "command": "pnpm",
-      "args": ["run", "format:sql"],
-      "group": "build",
-      "isBackground": false,
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
         "focus": false,
         "panel": "shared",
         "showReuseMessage": true,

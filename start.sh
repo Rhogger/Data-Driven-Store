@@ -3,9 +3,19 @@
 # --- Configurações ---
 API_SERVICE_NAME="dds_api"
 # Lista de serviços de banco de dados
-DB_SERVICES="postgres" # Mantenha todos os bancos aqui, mesmo que desativados
+DB_SERVICES="postgres mongo" # Atualizado para usar 'mongo' em vez de 'mongodb'
 
 echo "--- Iniciando ambiente de desenvolvimento Docker ---"
+
+# 0. Limpeza completa do ambiente anterior
+echo "0. Realizando limpeza completa do ambiente anterior..."
+# Para todos os containers
+docker compose down --volumes --remove-orphans
+# Remove imagens órfãs e build cache
+docker system prune -f
+# Remove volumes órfãos específicos do projeto
+docker volume prune -f
+echo "Limpeza completa finalizada."
 
 # 1. Iniciar serviços de banco de dados (se não estiverem rodando)
 echo "1. Verificando e iniciando serviços de banco de dados..."
@@ -26,19 +36,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# --- ADIÇÃO: Limpeza de "sujeira" antiga da API ---
-echo "3. Realizando limpeza de imagens e contêineres antigos da API..."
-# Remove contêineres da API que saíram (exited)
-docker ps -a --filter "name=$API_SERVICE_NAME" --format '{{.ID}}' | xargs docker rm -f 2>/dev/null || true
-# Remove imagens "<none>" associadas ao nome da sua imagem do Compose
-docker image prune --filter "dangling=true" --filter "label=com.docker.compose.project=${PWD##*/}" -f
-
-if [ $? -ne 0 ]; then
-    echo "Aviso: Falha na limpeza de imagens/contêineres antigos da API. Tentando continuar."
-fi
-# --- FIM DA ADIÇÃO ---
-
-echo "4. Subindo o serviço da API com a nova imagem..."
+echo "3. Subindo o serviço da API com a nova imagem..."
 docker compose up -d "$API_SERVICE_NAME"
 
 if [ $? -ne 0 ]; then
