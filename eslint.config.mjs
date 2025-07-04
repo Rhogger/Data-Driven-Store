@@ -7,7 +7,7 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['node_modules/', 'dist/', 'pnpm-lock.yaml', 'package-lock.json'],
+    ignores: ['node_modules/', 'dist/', 'pnpm-lock.yaml', 'package-lock.json', 'db/mongodb/*.js'],
   },
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,

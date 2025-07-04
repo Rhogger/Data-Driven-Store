@@ -23,10 +23,12 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_DATABASE: datadriven_store
     ports:
       - '27017:27017'
     volumes:
       - mongo_data:/data/db
+      - ./db/mongodb/init.js:/docker-entrypoint-initdb.d/init.js:ro
     networks:
       - datastore-network
     restart: unless-stopped
@@ -87,8 +89,8 @@ services:
       PG_HOST: postgres
       PG_PORT: 5432
 
-      MONGODB_URI: mongodb://admin:admin@mongo:27017
-      MONGODB_DATABASE: data_driven_store
+      MONGODB_URI: mongodb://app_user:app_password123@mongo:27017/datadriven_store
+      MONGODB_DATABASE: datadriven_store
 
     depends_on:
       - postgres
