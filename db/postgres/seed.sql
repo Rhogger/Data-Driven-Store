@@ -109,14 +109,17 @@ BEGIN
         random_cliente_id := floor(random() * total_clientes) + 1;
         SELECT id_endereco INTO random_endereco_id FROM enderecos WHERE id_cliente = random_cliente_id LIMIT 1;
 
-        -- Define status e data do pedido aleatoriamente
+        -- Define status do pedido aleatoriamente
         random_status_pedido := status_pedidos_arr[floor(random() * 5) + 1];
-        random_data_pedido := NOW() - (floor(random() * 400) || ' days')::interval - (floor(random() * 86400) || ' seconds')::interval;
 
-        -- Cria o pedido com valor total 0, que será atualizado depois
+        -- Cria o pedido com valor total 0 e data a partir de 01/01/2025, que será atualizado depois
         INSERT INTO pedidos (id_cliente, id_endereco, status_pedido, data_pedido, valor_total)
-        VALUES (random_cliente_id, random_endereco_id, random_status_pedido, random_data_pedido, 0)
-        RETURNING id_pedido INTO pedido_id;
+        VALUES (
+            random_cliente_id, random_endereco_id, random_status_pedido,
+            '2025-01-01'::timestamp + random() * (('2025-12-31'::timestamp) - ('2025-01-01'::timestamp)),
+            0
+        )
+        RETURNING id_pedido, data_pedido INTO pedido_id, random_data_pedido;
 
         pedido_valor_total := 0;
         num_itens_pedido := floor(random() * 3) + 1; -- Entre 1 e 3 itens por pedido
@@ -162,4 +165,3 @@ BEGIN
         );
     END LOOP;
 END $$;
-

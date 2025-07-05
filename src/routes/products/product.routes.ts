@@ -191,7 +191,7 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   }>('/products/:id', async (request, reply) => {
     try {
       const productRepository = new ProductRepository(fastify);
-      
+
       // Verificar se o produto existe antes de deletar
       const existingProduct = await productRepository.findById(request.params.id);
       if (!existingProduct) {
@@ -289,7 +289,7 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const productRepository = new ProductRepository(fastify);
       const result = await productRepository.countByCategory();
-      
+
       // Transformar o resultado para manter compatibilidade
       const stats = result.map((item) => ({
         categoryId: item._id,
@@ -316,7 +316,7 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   }>('/products/:id/stock', async (request, reply) => {
     try {
       const productRepository = new ProductRepository(fastify);
-      
+
       // Verificar se o produto existe
       const existingProduct = await productRepository.findById(request.params.id);
       if (!existingProduct) {
