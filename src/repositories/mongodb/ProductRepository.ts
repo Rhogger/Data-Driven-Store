@@ -25,19 +25,36 @@ export class ProductRepository {
   }
 
   async create(
-    product: Omit<Product, '_id' | 'created_at' | 'updated_at' | 'disponivel'>,
+    product: Omit<
+      Product,
+      '_id' | 'created_at' | 'updated_at' | 'disponivel' | 'reservado' | 'avaliacoes'
+    >,
   ): Promise<Product> {
     const now = new Date();
-    const reservado = product.reservado || 0;
+    const reservado = 0; // Sempre começar com 0 na criação
     const disponivel = product.estoque - reservado;
 
+    // Debug: verificar dados de entrada
+    this.fastify.log.info({ product }, 'Produto recebido no repositório');
+    this.fastify.log.info({ atributos: product.atributos }, 'Atributos específicos');
+
     const productToInsert: Omit<Product, '_id'> = {
-      ...product,
+      nome: product.nome,
+      descricao: product.descricao,
+      marca: product.marca,
+      preco: product.preco,
+      id_categoria: product.id_categoria,
+      estoque: product.estoque,
+      atributos: product.atributos || {}, // Preservar atributos enviados ou objeto vazio
       reservado,
       disponivel,
+      avaliacoes: {}, // Sempre começar com objeto vazio
       created_at: now,
       updated_at: now,
     };
+
+    // Debug: verificar dados antes da inserção
+    this.fastify.log.info({ productToInsert }, 'Produto a ser inserido');
 
     const result = await this.collection.insertOne(productToInsert);
 
@@ -48,7 +65,9 @@ export class ProductRepository {
   }
 
   async findById(id: string): Promise<Product | null> {
-    return await this.collection.findOne({ _id: new ObjectId(id) });
+    const product = await this.collection.findOne({ _id: new ObjectId(id) });
+    this.fastify.log.info({ product }, 'Produto encontrado no banco');
+    return product;
   }
 
   async findAll(limit = 10, skip = 0): Promise<Product[]> {
