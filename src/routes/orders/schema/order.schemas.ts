@@ -78,6 +78,32 @@ const createOrderBodySchema = {
   additionalProperties: false,
 };
 
+// Schema para listar pedidos por cliente
+const listOrdersByClienteSchema = {
+  params: {
+    type: 'object',
+    properties: {
+      id_cliente: { type: 'integer', description: 'ID do cliente' },
+    },
+    required: ['id_cliente'],
+  },
+  response: {
+    200: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id_pedido: { type: 'integer' },
+          data_pedido: { type: 'string', format: 'date-time' },
+          valor_total: { type: 'string' },
+          status_pedido: { type: 'string' },
+        },
+        required: ['id_pedido', 'data_pedido', 'valor_total', 'status_pedido'],
+      },
+    },
+  },
+};
+
 export const orderSchemas = {
   create: () => ({
     tags: ['Orders'],
@@ -90,5 +116,11 @@ export const orderSchemas = {
       400: errorResponse(),
       500: errorResponse(),
     },
+  }),
+  listByCliente: () => ({
+    tags: ['Orders'],
+    summary: 'Listar pedidos de um cliente',
+    description: 'Lista todos os pedidos de um cliente, incluindo o valor total.',
+    ...listOrdersByClienteSchema,
   }),
 };

@@ -87,7 +87,7 @@ DECLARE
     -- Arrays para seleção aleatória
     status_pedidos_arr status_pedido[] := ARRAY['Pendente', 'Processando', 'Enviado', 'Entregue', 'Cancelado'];
     status_transacoes_arr status_transacao[] := ARRAY['Aprovada', 'Recusada', 'Pendente', 'Estornada'];
-    produtos_mock_ids TEXT[] := ARRAY['60d5ec49e0d3f4a3c8a8b4a1', '60d5ec49e0d3f4a3c8a8b4a2', '60d5ec49e0d3f4a3c8a8b4a3', '60d5ec49e0d3f4a3c8a8b4a4', '60d5ec49e0d3f4a3c8a8b4a5', '60d5ec49e0d3f4a3c8a8b4a6', '60d5ec49e0d3f4a3c8a8b4a7', '60d5ec49e0d3f4a3c8a8b4a8', '60d5ec49e0d3f4a3c8a8b4a9', '60d5ec49e0d3f4a3c8a8b4a0'];
+    produtos_mock_ids TEXT[] := ARRAY['60d5ec49e0d3f4a3c8a8b4a1', '60d5ec49e0d3f4a3c8a8b4a2', '60d5ec49e0d3f4a3c8a8b4a3', '60d5ec49e0d3f4a3c8a8b4a4', '60d5ec49e0d3f4a3c8a8b4a5', '60d5ec49e0d3f4a3c8a8b4a6', '60d5ec49e0d3f4a3c8a8b4a7', '60d5ec49e0d3f4a3c8a8b4a8', '60d5ec49e0d3f4a3c8a8b4a9', '60d5ec49e0d3f4a3c8a8b4aa'];
     precos_produtos NUMERIC[] := ARRAY[899.99, 1599.99, 49.90, 79.90, 99.90, 29.99, 129.90, 349.00, 4500.00, 19.99];
 
     -- Variáveis de loop

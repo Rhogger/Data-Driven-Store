@@ -29,6 +29,7 @@ services:
     volumes:
       - mongo_data:/data/db
       - ./db/mongodb/init.js:/docker-entrypoint-initdb.d/init.js:ro
+      - ./db/mongodb/seed.js:/docker-entrypoint-initdb.d/seed.js:ro
     networks:
       - datastore-network
     restart: unless-stopped

@@ -1,4 +1,4 @@
-import { PoolClient } from 'pg';
+import { Pool, PoolClient } from 'pg';
 
 // Interface para os dados do pedido que vem da rota
 export interface OrderInput {
@@ -28,6 +28,8 @@ export interface CreatedOrder {
 }
 
 export class OrderRepository {
+  constructor(private pg?: Pool) {}
+
   async create(client: PoolClient, orderData: OrderInput): Promise<CreatedOrder> {
     try {
       await client.query('BEGIN');
@@ -67,5 +69,25 @@ export class OrderRepository {
       console.error('Erro na transação de criação de pedido, rollback executado.', error);
       throw new Error('Falha ao criar o pedido no banco de dados relacional.');
     }
+  }
+
+  async findByClienteId(id_cliente: number) {
+    if (!this.pg) {
+      throw new Error('PostgreSQL pool is not initialized.');
+    }
+    const result = await this.pg.query(
+      `
+      SELECT
+        p.id_pedido,
+        p.data_pedido,
+        p.valor_total,
+        p.status_pedido
+      FROM pedidos p
+      WHERE p.id_cliente = $1
+      ORDER BY p.data_pedido DESC
+      `,
+      [id_cliente],
+    );
+    return result.rows;
   }
 }

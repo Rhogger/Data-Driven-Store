@@ -134,6 +134,31 @@ const paginationQuerySchema = {
   },
 };
 
+const lowStockSchema = {
+  querystring: {
+    type: 'object',
+    properties: {
+      limiar: { type: 'integer', minimum: 0, default: 10, description: 'Valor limite do estoque' },
+    },
+    required: ['limiar'],
+  },
+  response: {
+    200: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          _id: { type: 'string' },
+          nome: { type: 'string' },
+          estoque: { type: 'integer' },
+          // adicione outros campos se quiser
+        },
+        required: ['_id', 'nome', 'estoque'],
+      },
+    },
+  },
+};
+
 export const productSchemas = {
   create: () => ({
     tags: ['Products'],
@@ -185,5 +210,12 @@ export const productSchemas = {
       404: errorResponse(),
       500: errorResponse(),
     },
+  }),
+
+  lowStock: () => ({
+    tags: ['Products'],
+    summary: 'Listar produtos com estoque abaixo do limiar',
+    description: 'Retorna todos os produtos cujo estoque está abaixo do valor informado.',
+    ...lowStockSchema,
   }),
 };
