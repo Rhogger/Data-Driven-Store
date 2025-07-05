@@ -2,18 +2,18 @@ import { PoolClient } from 'pg';
 
 // Interface para os dados do pedido que vem da rota
 export interface OrderInput {
-  customerId: number;
-  addressId: number;
-  totalValue: number;
-  items: OrderItemInput[];
+  id_cliente: number;
+  id_endereco: number;
+  valor_total: number;
+  itens: OrderItemInput[];
 }
 
 // Interface para os itens do pedido que vem da rota
 export interface OrderItemInput {
-  productId: string; // from MongoDB
-  categoryId: number;
-  unitPrice: number;
-  quantity: number;
+  id_produto: string; // from MongoDB
+  id_categoria: number;
+  preco_unitario: number;
+  quantidade: number;
   subtotal: number;
 }
 
@@ -38,9 +38,9 @@ export class OrderRepository {
         RETURNING id_pedido, id_cliente, id_endereco, valor_total, data_pedido, status_pedido;
       `;
       const orderResult = await client.query<CreatedOrder>(orderInsertQuery, [
-        orderData.customerId,
-        orderData.addressId,
-        orderData.totalValue,
+        orderData.id_cliente,
+        orderData.id_endereco,
+        orderData.valor_total,
       ]);
       const newOrder = orderResult.rows[0];
 
@@ -48,13 +48,13 @@ export class OrderRepository {
         INSERT INTO itens_pedido (id_pedido, id_produto, id_categoria, preco_unitario, quantidade, subtotal)
         VALUES ($1, $2, $3, $4, $5, $6);
       `;
-      for (const item of orderData.items) {
+      for (const item of orderData.itens) {
         await client.query(itemInsertQuery, [
           newOrder.id_pedido,
-          item.productId,
-          item.categoryId,
-          item.unitPrice,
-          item.quantity,
+          item.id_produto,
+          item.id_categoria,
+          item.preco_unitario,
+          item.quantidade,
           item.subtotal,
         ]);
       }

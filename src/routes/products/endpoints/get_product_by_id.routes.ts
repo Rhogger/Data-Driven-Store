@@ -1,0 +1,44 @@
+import { FastifyPluginAsync } from 'fastify';
+import { ProductRepository } from '@repositories/mongodb/ProductRepository';
+import { productSchemas } from '@routes/products/schema/product.schemas';
+
+const getProductByIdRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.get<{
+    Params: { id: string };
+  }>('/products/:id', {
+    schema: productSchemas.getById(),
+    handler: async (request, reply) => {
+      try {
+        const productRepository = new ProductRepository(fastify);
+        const product = await productRepository.findById(request.params.id);
+
+        if (!product) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Produto não encontrado',
+          });
+        }
+
+        // Debug: verificar produto antes de enviar resposta
+        fastify.log.info({ product }, 'Produto antes de enviar resposta');
+        fastify.log.info(
+          { atributos: product.atributos },
+          'Atributos do produto antes da resposta',
+        );
+
+        return reply.send({
+          success: true,
+          data: product,
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Erro interno do servidor ao buscar produto',
+        });
+      }
+    },
+  });
+};
+
+export default getProductByIdRoutes;

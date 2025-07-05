@@ -7,15 +7,14 @@ DB_SERVICES="postgres mongo" # Atualizado para usar 'mongo' em vez de 'mongodb'
 
 echo "--- Iniciando ambiente de desenvolvimento Docker ---"
 
-# 0. Limpeza completa do ambiente anterior
-echo "0. Realizando limpeza completa do ambiente anterior..."
-# Para todos os containers
-docker compose down --volumes --remove-orphans
-# Remove imagens órfãs e build cache
-docker system prune -f
-# Remove volumes órfãos específicos do projeto
-docker volume prune -f
-echo "Limpeza completa finalizada."
+# 0. Limpeza seletiva do ambiente anterior (preservando dados do banco)
+echo "0. Realizando limpeza seletiva do ambiente anterior (preservando dados)..."
+# Para apenas o container da API, mantendo os bancos
+docker compose stop "$API_SERVICE_NAME"
+docker compose rm -f "$API_SERVICE_NAME"
+# Remove apenas imagens órfãs e build cache (não remove volumes)
+docker system prune -f --filter "label!=com.docker.compose.project"
+echo "Limpeza seletiva finalizada (dados dos bancos preservados)."
 
 # 1. Iniciar serviços de banco de dados (se não estiverem rodando)
 echo "1. Verificando e iniciando serviços de banco de dados..."
