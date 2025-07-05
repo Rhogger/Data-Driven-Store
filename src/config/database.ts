@@ -18,12 +18,18 @@ interface RedisConfig {
   db?: number;
 }
 
+interface Neo4jConfig {
+  uri: string;
+  user: string;
+  password: string;
+}
+
 interface DatabaseConfig {
   postgres: PostgresConfig;
   mongodb: MongoDBConfig;
   redis: RedisConfig;
+  neo4j: Neo4jConfig;
   // cassandra: CassandraConfig;
-  // neo4j: Neo4jConfig;
 }
 
 export const databaseConfig: DatabaseConfig = {
@@ -43,5 +49,10 @@ export const databaseConfig: DatabaseConfig = {
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
     password: process.env.REDIS_PASSWORD,
     db: parseInt(process.env.REDIS_DB || '0', 10),
+  },
+  neo4j: {
+    uri: process.env.NEO4J_URI || 'bolt://localhost:7687',
+    user: process.env.NEO4J_USER || 'neo4j',
+    password: process.env.NEO4J_PASSWORD || 'admin',
   },
 };

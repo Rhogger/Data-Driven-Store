@@ -32,8 +32,13 @@ export const healthCheckSchemas = {
             description: 'Status da conexão com Redis',
             enum: ['connected', 'disconnected'],
           },
+          neo4j: {
+            type: 'string',
+            description: 'Status da conexão com Neo4j',
+            enum: ['connected', 'disconnected'],
+          },
         },
-        required: ['status', 'timestamp', 'mongodb', 'postgres', 'redis'],
+        required: ['status', 'timestamp', 'mongodb', 'postgres', 'redis', 'neo4j'],
       },
       500: {
         type: 'object',

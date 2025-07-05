@@ -11,6 +11,7 @@ async function healthCheckHandler(
     let mongoStatus = 'connected';
     let postgresStatus = 'connected';
     let redisStatus = 'connected';
+    let neo4jStatus = 'connected';
 
     try {
       // Verificar MongoDB
@@ -33,12 +34,20 @@ async function healthCheckHandler(
       redisStatus = 'disconnected';
     }
 
+    try {
+      // Verificar Neo4j
+      await this.neo4j.getServerInfo();
+    } catch {
+      neo4jStatus = 'disconnected';
+    }
+
     reply.code(200).send({
       status: 'ok',
       timestamp: new Date().toISOString(),
       mongodb: mongoStatus,
       postgres: postgresStatus,
       redis: redisStatus,
+      neo4j: neo4jStatus,
     });
   } catch (error) {
     this.log.error(error);

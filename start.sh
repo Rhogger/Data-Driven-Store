@@ -3,7 +3,7 @@
 # --- Configurações ---
 API_SERVICE_NAME="dds_api"
 # Lista de serviços de banco de dados
-DB_SERVICES="postgres mongo" # Atualizado para usar 'mongo' em vez de 'mongodb'
+DB_SERVICES="postgres mongo redis neo4j" # Atualizado para usar 'mongo' em vez de 'mongodb'
 
 echo "--- Iniciando ambiente de desenvolvimento Docker ---"
 

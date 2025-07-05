@@ -21,9 +21,9 @@ services:
     image: mongo:6.0
     container_name: mongo_db
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin
-      MONGO_INITDB_DATABASE: datadriven_store
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
     ports:
       - '27017:27017'
     volumes:
@@ -57,20 +57,22 @@ services:
   #     - datastore-network
   #   restart: unless-stopped
 
-  # # Neo4j
-  # neo4j:
-  #   image: neo4j:5.7
-  #   container_name: neo4j_db
-  #   environment:
-  #     NEO4J_AUTH: neo4j/admin
-  #   ports:
-  #     - "7474:7474"
-  #     - "7687:7687"
-  #   volumes:
-  #     - neo4j_data:/data
-  #   networks:
-  #     - datastore-network
-  #   restart: unless-stopped
+  # Neo4j
+  neo4j:
+    image: neo4j:5.7
+    container_name: neo4j_db
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - '7474:7474'
+      - '7687:7687'
+    volumes:
+      - neo4j_data:/data
+      - ./db/neo4j:/var/lib/neo4j/import
+    networks:
+      - datastore-network
+    restart: unless-stopped
 
   dds_api:
     build: .
@@ -89,19 +91,23 @@ services:
       PG_HOST: postgres
       PG_PORT: 5432
 
-      MONGODB_URI: mongodb://app_user:app_password123@mongo:27017/datadriven_store
-      MONGODB_DATABASE: datadriven_store
+      MONGODB_URI: ${MONGODB_URI}
+      MONGODB_DATABASE: ${MONGODB_DATABASE}
 
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_DB: 0
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_DB: ${REDIS_DB}
+
+      NEO4J_URI: ${NEO4J_URI}
+      NEO4J_USER: ${NEO4J_USER}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
 
     depends_on:
       - postgres
       - mongo
       - redis
+      - neo4j
       # - cassandra
-      # - neo4j
     networks:
       - datastore-network
     volumes:
@@ -115,7 +121,7 @@ volumes:
   mongo_data:
   redis_data:
   # cassandra_data:
-  # neo4j_data:
+  neo4j_data:
 
 networks:
   datastore-network:
