@@ -33,17 +33,17 @@ services:
       - datastore-network
     restart: unless-stopped
 
-  # # Redis
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: redis_cache
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis_data:/data
-  #   networks:
-  #     - datastore-network
-  #   restart: unless-stopped
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - datastore-network
+    restart: unless-stopped
 
   # # Cassandra
   # cassandra:
@@ -92,10 +92,14 @@ services:
       MONGODB_URI: mongodb://app_user:app_password123@mongo:27017/datadriven_store
       MONGODB_DATABASE: datadriven_store
 
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+
     depends_on:
       - postgres
       - mongo
-      # - redis
+      - redis
       # - cassandra
       # - neo4j
     networks:
@@ -109,7 +113,7 @@ services:
 volumes:
   postgres_data:
   mongo_data:
-  # redis_data:
+  redis_data:
   # cassandra_data:
   # neo4j_data:
 

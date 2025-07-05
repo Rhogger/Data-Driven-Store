@@ -27,8 +27,13 @@ export const healthCheckSchemas = {
             description: 'Status da conexão com PostgreSQL',
             enum: ['connected', 'disconnected'],
           },
+          redis: {
+            type: 'string',
+            description: 'Status da conexão com Redis',
+            enum: ['connected', 'disconnected'],
+          },
         },
-        required: ['status', 'timestamp', 'mongodb', 'postgres'],
+        required: ['status', 'timestamp', 'mongodb', 'postgres', 'redis'],
       },
       500: {
         type: 'object',

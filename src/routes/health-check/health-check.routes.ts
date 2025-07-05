@@ -10,6 +10,7 @@ async function healthCheckHandler(
     // Verificar conexões com bancos de dados
     let mongoStatus = 'connected';
     let postgresStatus = 'connected';
+    let redisStatus = 'connected';
 
     try {
       // Verificar MongoDB
@@ -25,11 +26,19 @@ async function healthCheckHandler(
       postgresStatus = 'disconnected';
     }
 
+    try {
+      // Verificar Redis
+      await this.redis.ping();
+    } catch {
+      redisStatus = 'disconnected';
+    }
+
     reply.code(200).send({
       status: 'ok',
       timestamp: new Date().toISOString(),
       mongodb: mongoStatus,
       postgres: postgresStatus,
+      redis: redisStatus,
     });
   } catch (error) {
     this.log.error(error);

@@ -11,12 +11,19 @@ interface MongoDBConfig {
   database: string;
 }
 
+interface RedisConfig {
+  host?: string;
+  port?: number;
+  password?: string;
+  db?: number;
+}
+
 interface DatabaseConfig {
   postgres: PostgresConfig;
   mongodb: MongoDBConfig;
+  redis: RedisConfig;
   // cassandra: CassandraConfig;
   // neo4j: Neo4jConfig;
-  // redis: RedisConfig;
 }
 
 export const databaseConfig: DatabaseConfig = {
@@ -30,5 +37,11 @@ export const databaseConfig: DatabaseConfig = {
   mongodb: {
     uri: process.env.MONGODB_URI || 'mongodb://localhost:27017',
     database: process.env.MONGODB_DATABASE || 'data_driven_store',
+  },
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD,
+    db: parseInt(process.env.REDIS_DB || '0', 10),
   },
 };

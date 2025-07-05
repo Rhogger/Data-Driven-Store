@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import postgresConnector from '@plugins/postgresConnector';
 import mongodbConnector from '@plugins/mongodbConnector';
+import redisConnector from '@plugins/redisConnector';
 import apiRoutes from '@routes/index';
 
 const app = Fastify({
@@ -26,6 +27,9 @@ app.register(import('@fastify/swagger'), {
       { name: 'Health Check', description: 'Endpoints de verificação de saúde' },
       { name: 'Categories', description: 'Operações relacionadas a categorias' },
       { name: 'Products', description: 'Operações relacionadas a produtos' },
+      { name: 'Orders', description: 'Operações relacionadas a pedidos' },
+      { name: 'Reports', description: 'Relatórios e análises' },
+      { name: 'Cache Test', description: 'Endpoints para testar operações de cache Redis' },
     ],
   },
 });
@@ -42,6 +46,7 @@ app.register(import('@fastify/swagger-ui'), {
 
 app.register(postgresConnector);
 app.register(mongodbConnector);
+app.register(redisConnector);
 
 app.register(apiRoutes, { prefix: '/api' });
 
