@@ -11,11 +11,10 @@
     "baseUrl": "./src",
     "paths": {
       "@/*": ["./*"],
-      "@config/*": ["config/*"],
-      "@plugins/*": ["plugins/*"],
-      "@repositories/*": ["repositories/*"],
-      "@routes/*": ["routes/*"],
-      "@services/*": ["services/*"]
+      "@config/*": ["./config/*"],
+      "@plugins/*": ["./plugins/*"],
+      "@repositories/*": ["./repositories/*"],
+      "@routes/*": ["./routes/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.sql"],

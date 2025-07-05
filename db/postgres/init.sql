@@ -1,17 +1,13 @@
 SET session_replication_role = 'replica';
 
--- 1. Criação dos Tipos ENUM personalizados
+-- 1. Criação dos Tipos ENUM personalizados (padrão snake_case)
 --------------------------------------------------------------------------------
 
 -- Tipo para o status do pedido
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status_pedido') THEN
-        CREATE TYPE STATUS_PEDIDO AS ENUM (
-            'Pendente',
-            'Processando',
-                            'Enviado',
-            'Entregue',
-            'Cancelado'
+        CREATE TYPE status_pedido AS ENUM (
+            'Pendente', 'Processando', 'Enviado', 'Entregue', 'Cancelado'
         );
     END IF;
 END $$;
@@ -19,11 +15,8 @@ END $$;
 -- Tipo para o status da transação
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status_transacao') THEN
-        CREATE TYPE STATUS_TRANSACAO AS ENUM (
-            'Aprovada',
-            'Recusada',
-            'Pendente',
-            'Estornada'
+        CREATE TYPE status_transacao AS ENUM (
+            'Aprovada', 'Recusada', 'Pendente', 'Estornada'
         );
     END IF;
 END $$;
@@ -31,20 +24,17 @@ END $$;
 -- Tipo para o tipo de endereço
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_endereco') THEN
-        CREATE TYPE TIPO_ENDERECO AS ENUM (
-            'Residencial',
-            'Comercial',
-            'Entrega',
-            'Cobranca'
+        CREATE TYPE tipo_endereco AS ENUM (
+            'Residencial', 'Comercial', 'Entrega', 'Cobranca'
         );
     END IF;
 END $$;
 
 
--- 2. Criação das Tabelas
+-- 2. Criação das Tabelas (padrão snake_case)
 --------------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS Estados (
+CREATE TABLE IF NOT EXISTS estados (
     id_estado SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     uf VARCHAR(2) UNIQUE NOT NULL,
@@ -52,16 +42,16 @@ CREATE TABLE IF NOT EXISTS Estados (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS Cidades (
+CREATE TABLE IF NOT EXISTS cidades (
     id_cidade SERIAL PRIMARY KEY,
     id_estado INT NOT NULL,
     nome VARCHAR(100) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_estado) REFERENCES Estados(id_estado) ON DELETE RESTRICT ON UPDATE NO ACTION
+    FOREIGN KEY (id_estado) REFERENCES estados(id_estado) ON DELETE RESTRICT ON UPDATE NO ACTION
 );
 
-CREATE TABLE IF NOT EXISTS Clientes (
+CREATE TABLE IF NOT EXISTS clientes (
     id_cliente SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -71,14 +61,16 @@ CREATE TABLE IF NOT EXISTS Clientes (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS Categorias (
+CREATE TABLE IF NOT EXISTS categorias (
     id_categoria SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
+    id_categoria_pai INT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_categoria_pai) REFERENCES categorias(id_categoria) ON DELETE SET NULL
 );
 
-CREATE TABLE IF NOT EXISTS Enderecos (
+CREATE TABLE IF NOT EXISTS enderecos (
     id_endereco SERIAL PRIMARY KEY,
     id_cliente INT NOT NULL,
     id_cidade INT NOT NULL,
@@ -87,14 +79,14 @@ CREATE TABLE IF NOT EXISTS Enderecos (
     complemento VARCHAR(100),
     bairro VARCHAR(100),
     cep VARCHAR(10) NOT NULL,
-    tipo_endereco TIPO_ENDERECO NOT NULL,
+    tipo_endereco tipo_endereco NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_cliente) REFERENCES Clientes(id_cliente) ON DELETE CASCADE ON UPDATE NO ACTION,
-    FOREIGN KEY (id_cidade) REFERENCES Cidades(id_cidade) ON DELETE RESTRICT ON UPDATE NO ACTION
+    FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE CASCADE ON UPDATE NO ACTION,
+    FOREIGN KEY (id_cidade) REFERENCES cidades(id_cidade) ON DELETE RESTRICT ON UPDATE NO ACTION
 );
 
-CREATE TABLE IF NOT EXISTS Metodos_Pagamento (
+CREATE TABLE IF NOT EXISTS metodos_pagamento (
     id_metodo_pagamento SERIAL PRIMARY KEY,
     nome_pagamento VARCHAR(100) NOT NULL,
     ativo BOOLEAN NOT NULL DEFAULT TRUE,
@@ -102,42 +94,45 @@ CREATE TABLE IF NOT EXISTS Metodos_Pagamento (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS Pedidos (
+CREATE TABLE IF NOT EXISTS pedidos (
     id_pedido SERIAL PRIMARY KEY,
     id_cliente INT NOT NULL,
     id_endereco INT NOT NULL,
-    status_pedido STATUS_PEDIDO NOT NULL,
+    status_pedido status_pedido NOT NULL,
     data_pedido TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     valor_total NUMERIC(10, 2) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_cliente) REFERENCES Clientes(id_cliente) ON DELETE RESTRICT ON UPDATE NO ACTION,
-    FOREIGN KEY (id_endereco) REFERENCES Enderecos(id_endereco) ON DELETE RESTRICT ON UPDATE NO ACTION
+    FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente) ON DELETE RESTRICT ON UPDATE NO ACTION,
+    FOREIGN KEY (id_endereco) REFERENCES enderecos(id_endereco) ON DELETE RESTRICT ON UPDATE NO ACTION
 );
 
-CREATE TABLE IF NOT EXISTS Transacoes_Financeiras (
+CREATE TABLE IF NOT EXISTS transacoes_financeiras (
     id_transacao SERIAL PRIMARY KEY,
     id_pedido INT NOT NULL,
     id_metodo_pagamento INT NOT NULL,
     valor_transacao NUMERIC(10, 2) NOT NULL,
     data_transacao TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    status_transacao STATUS_TRANSACAO NOT NULL,
+    status_transacao status_transacao NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_pedido) REFERENCES Pedidos(id_pedido) ON DELETE RESTRICT ON UPDATE NO ACTION,
-    FOREIGN KEY (id_metodo_pagamento) REFERENCES Metodos_Pagamento(id_metodo_pagamento) ON DELETE RESTRICT ON UPDATE NO ACTION
+    FOREIGN KEY (id_pedido) REFERENCES pedidos(id_pedido) ON DELETE RESTRICT ON UPDATE NO ACTION,
+    FOREIGN KEY (id_metodo_pagamento) REFERENCES metodos_pagamento(id_metodo_pagamento) ON DELETE RESTRICT ON UPDATE NO ACTION
 );
 
-CREATE TABLE IF NOT EXISTS Itens_Pedido (
+CREATE TABLE IF NOT EXISTS itens_pedido (
     id_item_pedido SERIAL PRIMARY KEY,
     id_pedido INT NOT NULL,
     id_produto VARCHAR(24) NOT NULL,
+    id_categoria INT NOT NULL,
     preco_unitario NUMERIC(10, 2) NOT NULL,
     quantidade INT NOT NULL,
     subtotal NUMERIC(10, 2) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_pedido) REFERENCES Pedidos(id_pedido) ON DELETE CASCADE ON UPDATE NO ACTION,
+    FOREIGN KEY (id_pedido) REFERENCES pedidos(id_pedido) ON DELETE CASCADE ON UPDATE NO ACTION,
+    FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria) ON DELETE RESTRICT
+);
 
 -- 3. Triggers
 --------------------------------------------------------------------------------
