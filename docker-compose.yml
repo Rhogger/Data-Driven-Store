@@ -15,6 +15,12 @@ services:
     networks:
       - datastore-network
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # MongoDB
   mongo:
@@ -33,11 +39,17 @@ services:
     networks:
       - datastore-network
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
   # Redis
   redis:
     image: redis:7-alpine
-    container_name: redis_cache
+    container_name: redis
     ports:
       - '6379:6379'
     volumes:
@@ -45,18 +57,36 @@ services:
     networks:
       - datastore-network
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-  # # Cassandra
-  # cassandra:
-  #   image: cassandra:4.0
-  #   container_name: cassandra_db
-  #   ports:
-  #     - "9042:9042"
-  #   volumes:
-  #     - cassandra_data:/var/lib/cassandra
-  #   networks:
-  #     - datastore-network
-  #   restart: unless-stopped
+  # Cassandra
+  cassandra:
+    image: cassandra:4.0
+    container_name: cassandra_db
+    ports:
+      - '9042:9042'
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+      - ./db/cassandra:/docker-entrypoint-initdb.d
+    environment:
+      - CASSANDRA_CLUSTER_NAME=TestCluster
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_RACK=rack1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+    networks:
+      - datastore-network
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', "cqlsh -e 'DESCRIBE KEYSPACES' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
 
   # Neo4j
   neo4j:
@@ -65,15 +95,24 @@ services:
     environment:
       NEO4J_AUTH: ${NEO4J_USER}/${NEO4J_PASSWORD}
       NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: 'gds.*,apoc.*'
+      NEO4J_dbms_security_procedures_allowlist: 'gds.*,apoc.*'
     ports:
       - '7474:7474'
       - '7687:7687'
     volumes:
       - neo4j_data:/data
-      - ./db/neo4j:/var/lib/neo4j/import
+      - neo4j_logs:/logs
+      - ./db/neo4j:/import
     networks:
       - datastore-network
     restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'cypher-shell', '-u', 'neo4j', '-p', '${NEO4J_PASSWORD}', 'RETURN 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   dds_api:
     build: .
@@ -103,12 +142,23 @@ services:
       NEO4J_USER: ${NEO4J_USER}
       NEO4J_PASSWORD: ${NEO4J_PASSWORD}
 
+      CASSANDRA_HOST: ${CASSANDRA_HOST}
+      CASSANDRA_PORT: ${CASSANDRA_PORT}
+      CASSANDRA_USER: ${CASSANDRA_USER}
+      CASSANDRA_PASSWORD: ${CASSANDRA_PASSWORD}
+      CASSANDRA_KEYSPACE: ${CASSANDRA_KEYSPACE}
+
     depends_on:
-      - postgres
-      - mongo
-      - redis
-      - neo4j
-      # - cassandra
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
     networks:
       - datastore-network
     volumes:
@@ -121,8 +171,9 @@ volumes:
   postgres_data:
   mongo_data:
   redis_data:
-  # cassandra_data:
+  cassandra_data:
   neo4j_data:
+  neo4j_logs:
 
 networks:
   datastore-network:

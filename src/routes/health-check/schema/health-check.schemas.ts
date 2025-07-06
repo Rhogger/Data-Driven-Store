@@ -37,8 +37,13 @@ export const healthCheckSchemas = {
             description: 'Status da conexão com Neo4j',
             enum: ['connected', 'disconnected'],
           },
+          cassandra: {
+            type: 'string',
+            description: 'Status da conexão com Cassandra',
+            enum: ['connected', 'disconnected'],
+          },
         },
-        required: ['status', 'timestamp', 'mongodb', 'postgres', 'redis', 'neo4j'],
+        required: ['status', 'timestamp', 'mongodb', 'postgres', 'redis', 'neo4j', 'cassandra'],
       },
       500: {
         type: 'object',

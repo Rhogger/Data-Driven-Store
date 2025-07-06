@@ -2,6 +2,10 @@
 
 echo "--- Iniciando build e execução da aplicação ---"
 
+# 0. Aguardar bancos de dados estarem prontos
+echo "0. Aguardando bancos de dados ficarem prontos..."
+./wait-for-databases.sh
+
 # 1. Limpar build anterior
 echo "1. Limpando build anterior..."
 rm -rf dist

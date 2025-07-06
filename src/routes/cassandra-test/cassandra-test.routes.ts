@@ -1,13 +1,20 @@
 import { FastifyInstance } from 'fastify';
+import { Client } from 'cassandra-driver';
 
-export default async function neo4jTestRoutes(fastify: FastifyInstance) {
+declare module 'fastify' {
+  interface FastifyInstance {
+    cassandra: Client;
+  }
+}
+
+export default async function cassandraTestRoutes(fastify: FastifyInstance) {
   fastify.get(
-    '/neo4j/ping',
+    '/cassandra/ping',
     {
       schema: {
         tags: ['Database Tests'],
-        summary: 'Testa conexão com Neo4j',
-        description: 'Endpoint para verificar se a conexão com Neo4j está funcionando',
+        summary: 'Testa conexão com Cassandra',
+        description: 'Endpoint para verificar se a conexão com Cassandra está funcionando',
         response: {
           200: {
             type: 'object',
@@ -29,7 +36,7 @@ export default async function neo4jTestRoutes(fastify: FastifyInstance) {
     async (request, reply) => {
       try {
         // Ping simples para testar a conexão
-        await fastify.neo4j.executeQuery('RETURN 1 as ping');
+        await fastify.cassandra.execute('SELECT now() FROM system.local');
         return { ping: 'pong', status: 'ok' };
       } catch (err: any) {
         return reply.status(500).send({ ping: 'error', error: err?.message || 'Unknown error' });

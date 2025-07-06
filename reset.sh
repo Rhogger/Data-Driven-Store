@@ -21,6 +21,10 @@ echo -e "${CYAN}📅 $(date)${NC}"
 echo -e "${YELLOW}⚠️  Este script irá remover TODOS os containers, volumes e imagens do projeto${NC}"
 echo ""
 
+echo -e "${YELLOW}🔧 0. Corrigindo permissões dos diretórios de banco de dados...${NC}"
+./fix-permissions.sh
+echo -e "${GREEN}✅ Permissões corrigidas${NC}"
+
 echo -e "${YELLOW}🧹 1. Derrubando e removendo containers e volumes do Docker Compose...${NC}"
 docker compose down -v --rmi all
 

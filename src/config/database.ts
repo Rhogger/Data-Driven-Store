@@ -4,6 +4,14 @@ interface PostgresConfig {
   database?: string;
   password?: string;
   port?: number;
+  // Configurações de Pool otimizadas para produção
+  max?: number; // máximo de conexões no pool
+  min?: number; // mínimo de conexões no pool
+  idle?: number; // tempo antes de fechar conexão idle
+  acquire?: number; // tempo máximo para adquirir conexão
+  evict?: number; // intervalo para verificar conexões idle
+  handleDisconnects?: boolean;
+  ssl?: boolean | object;
 }
 
 interface MongoDBConfig {

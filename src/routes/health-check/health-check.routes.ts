@@ -12,6 +12,7 @@ async function healthCheckHandler(
     let postgresStatus = 'connected';
     let redisStatus = 'connected';
     let neo4jStatus = 'connected';
+    let cassandraStatus = 'connected';
 
     try {
       // Verificar MongoDB
@@ -41,6 +42,13 @@ async function healthCheckHandler(
       neo4jStatus = 'disconnected';
     }
 
+    try {
+      // Verificar Cassandra
+      await this.cassandra.execute('SELECT now() FROM system.local');
+    } catch {
+      cassandraStatus = 'disconnected';
+    }
+
     reply.code(200).send({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -48,6 +56,7 @@ async function healthCheckHandler(
       postgres: postgresStatus,
       redis: redisStatus,
       neo4j: neo4jStatus,
+      cassandra: cassandraStatus,
     });
   } catch (error) {
     this.log.error(error);

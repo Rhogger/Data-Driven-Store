@@ -3,12 +3,16 @@
 # --- Configurações ---
 API_SERVICE_NAME="dds_api"
 # Lista de serviços de banco de dados
-DB_SERVICES="postgres mongo redis neo4j" # Atualizado para usar 'mongo' em vez de 'mongodb'
+DB_SERVICES="postgres mongo redis neo4j cassandra" # Incluído cassandra na lista
 
 echo "--- Iniciando ambiente de desenvolvimento Docker ---"
 
-# 0. Limpeza seletiva do ambiente anterior (preservando dados do banco)
-echo "0. Realizando limpeza seletiva do ambiente anterior (preservando dados)..."
+# 0. Corrigir permissões dos diretórios de banco de dados
+echo "0. Corrigindo permissões dos diretórios de banco de dados..."
+./fix-permissions.sh
+
+# 1. Limpeza seletiva do ambiente anterior (preservando dados do banco)
+echo "1. Realizando limpeza seletiva do ambiente anterior (preservando dados)..."
 # Para apenas o container da API, mantendo os bancos
 docker compose stop "$API_SERVICE_NAME"
 docker compose rm -f "$API_SERVICE_NAME"
@@ -16,8 +20,8 @@ docker compose rm -f "$API_SERVICE_NAME"
 docker system prune -f --filter "label!=com.docker.compose.project"
 echo "Limpeza seletiva finalizada (dados dos bancos preservados)."
 
-# 1. Iniciar serviços de banco de dados (se não estiverem rodando)
-echo "1. Verificando e iniciando serviços de banco de dados..."
+# 2. Iniciar serviços de banco de dados (se não estiverem rodando)
+echo "2. Verificando e iniciando serviços de banco de dados..."
 docker compose up -d $DB_SERVICES
 
 if [ $? -ne 0 ]; then
