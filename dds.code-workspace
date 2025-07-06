@@ -8,7 +8,7 @@
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {
       "package.json": ".npmrc, .pnpmrc, package-lock.json, pnpm-lock.yaml, .gitignore, .tool-versions, tsconfig.json, docker-compose.yml, Dockerfile, .dockerignore, dds.code-workspace, .prettierrc.json, eslint.config.mjs, .editorconfig, .prettierignore, README.md", // Agrupa lockfiles e configs de pacote
-      "start.sh": "start-dev.sh, reset.sh, build.sh, run.sh, fix-permissions.sh, wait-for-database.sh", // Agrupa arquivos Docker
+      "start.sh": "start-dev.sh, reset.sh, build.sh, run.sh, fix-permissions.sh, wait-for-databases.sh", // Agrupa arquivos Docker
     },
 
     "editor.defaultFormatter": "esbenp.prettier-vscode",
