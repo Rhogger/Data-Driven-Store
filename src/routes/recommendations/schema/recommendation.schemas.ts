@@ -10,7 +10,7 @@ export const productRecommendationSchemas = {
         produtoId: {
           type: 'string',
           description: 'ID do produto para encontrar recomendações',
-          example: 'PROD001',
+          // // example: 'PROD001',
         },
       },
       required: ['produtoId'],
@@ -136,7 +136,7 @@ export const productRecommendationSchemas = {
         clienteId: {
           type: 'string',
           description: 'ID do cliente para encontrar recomendações',
-          example: 'CLI001',
+          // example: 'CLI001',
         },
       },
       required: ['clienteId'],
@@ -294,12 +294,12 @@ export const productRecommendationSchemas = {
         produtoOrigemId: {
           type: 'string',
           description: 'ID do produto de origem',
-          example: 'PROD001',
+          // example: 'PROD001',
         },
         produtoDestinoId: {
           type: 'string',
           description: 'ID do produto de destino',
-          example: 'PROD002',
+          // example: 'PROD002',
         },
       },
       required: ['produtoOrigemId', 'produtoDestinoId'],
@@ -621,7 +621,7 @@ export const productRecommendationSchemas = {
   }),
 
   categoryBasedRecommendations: () => ({
-    tags: ['Client Recommendations'],
+    tags: ['Customer Recommendations'],
     summary: 'Recomendações baseadas em categorias visualizadas',
     description:
       'Recomenda produtos de categorias que um cliente visualizou, mas das quais ainda não comprou',
@@ -631,7 +631,7 @@ export const productRecommendationSchemas = {
         clienteId: {
           type: 'string',
           description: 'ID do cliente para recomendações',
-          example: 'CLI001',
+          // example: 'CLI001',
         },
       },
       required: ['clienteId'],

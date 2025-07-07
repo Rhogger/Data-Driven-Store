@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Detectar modo baseado na variável de ambiente
-if [ "${DEV_MODE}" = "true" ]; then
+# Detectar modo baseado na variável de ambiente NODE_ENV
+if [ "${NODE_ENV}" = "development" ]; then
     echo "--- Iniciando aplicação em modo DESENVOLVIMENTO com HOT RELOAD ---"
 
     # 0. Aguardar bancos de dados estarem prontos

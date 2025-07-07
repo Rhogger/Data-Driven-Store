@@ -33,6 +33,14 @@ app.register(import('@fastify/swagger'), {
       { name: 'Orders', description: 'Operações relacionadas a pedidos' },
       { name: 'Reports', description: 'Relatórios e análises' },
       { name: 'Database Tests', description: 'Endpoints para testar conexões com bancos de dados' },
+      {
+        name: 'Product Recommendations',
+        description: 'Endpoints para recomendações de produtos',
+      },
+      {
+        name: 'Customer Recommendations',
+        description: 'Endpoints para recomendações de clientes',
+      },
     ],
   },
 });

@@ -52,7 +52,11 @@ echo -e "${GREEN}✅ Cache de build removido${NC}"
 echo ""
 echo -e "${BLUE}🔧 === RECONSTRUINDO AMBIENTE === ${NC}"
 
-echo -e "${YELLOW}🏗️  1. Reconstruindo a imagem da API sem cache...${NC}"
+# Definir modo desenvolvimento por padrão no reset
+export DEV_MODE=true
+export BUILD_MODE=development
+
+echo -e "${YELLOW}🏗️  1. Reconstruindo a imagem da API sem cache (MODO DESENVOLVIMENTO)...${NC}"
 docker compose build --no-cache "$API_SERVICE_NAME"
 
 if [ $? -ne 0 ]; then
@@ -61,7 +65,7 @@ if [ $? -ne 0 ]; then
 fi
 echo -e "${GREEN}✅ Imagem da API reconstruída${NC}"
 
-echo -e "${YELLOW}🚀 2. Subindo todos os serviços...${NC}"
+echo -e "${YELLOW}🚀 2. Subindo todos os serviços (MODO DESENVOLVIMENTO)...${NC}"
 docker compose up -d "$API_SERVICE_NAME"
 
 if [ $? -ne 0 ]; then

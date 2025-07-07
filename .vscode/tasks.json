@@ -2,60 +2,28 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "🏗️ Build Project",
+      "label": "🎨 Format Project",
       "type": "shell",
-      "command": "./build.sh",
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "problemMatcher": ["$tsc"],
+      "command": "pnpm",
+      "args": ["run", "format"],
+      "group": "build",
       "isBackground": false,
       "presentation": {
         "echo": true,
-        "reveal": "always",
+        "reveal": "silent",
         "focus": false,
         "panel": "shared",
         "showReuseMessage": true,
         "clear": false
-      }
-    },
-    {
-      "label": "🚀 Start Docker Environment (Production)",
-      "type": "shell",
-      "command": "./start.sh",
-      "args": ["production"],
-      "group": "test",
-      "isBackground": true,
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "new",
-        "showReuseMessage": true,
-        "clear": true
-      },
-      "problemMatcher": {
-        "owner": "docker",
-        "pattern": {
-          "regexp": "^(ERRO|ERROR):\\s*(.*)$",
-          "severity": 1,
-          "message": 2
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "--- Iniciando ambiente Docker em modo PRODUÇÃO",
-          "endsPattern": "Server listening at"
-        }
       },
       "options": {
         "statusbar": {
-          "label": "Start Production"
+          "label": "Format"
         }
       }
     },
     {
-      "label": "🔥 Start Docker Environment (Development - Hot Reload)",
+      "label": "🚀 Start Development Environment (Hot Reload)",
       "type": "shell",
       "command": "./start.sh",
       "args": ["dev"],
@@ -84,7 +52,7 @@
       },
       "options": {
         "statusbar": {
-          "label": "Start Dev Mode"
+          "label": "Start"
         }
       }
     },
@@ -104,76 +72,7 @@
       },
       "options": {
         "statusbar": {
-          "label": "Reset Docker"
-        }
-      }
-    },
-    {
-      "label": "🎨 Format Project",
-      "type": "shell",
-      "command": "pnpm",
-      "args": ["run", "format"],
-      "group": "build",
-      "isBackground": false,
-      "presentation": {
-        "echo": true,
-        "reveal": "silent",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      }
-    },
-    {
-      "label": "🔥 Start Development Environment (Hot Reload)",
-      "type": "shell",
-      "command": "./start-dev.sh",
-      "group": "test",
-      "isBackground": true,
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "new",
-        "showReuseMessage": true,
-        "clear": true
-      },
-      "problemMatcher": {
-        "owner": "docker",
-        "pattern": {
-          "regexp": "^(ERRO|ERROR):\\s*(.*)$",
-          "severity": 1,
-          "message": 2
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "--- Iniciando ambiente de desenvolvimento Docker com HOT RELOAD ---",
-          "endsPattern": "Server listening at"
-        }
-      },
-      "options": {
-        "statusbar": {
-          "label": "Start Dev Mode"
-        }
-      }
-    },
-    {
-      "label": "🛑 Stop Development Environment",
-      "type": "shell",
-      "command": "./stop-dev.sh",
-      "group": "test",
-      "isBackground": false,
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
-      "options": {
-        "statusbar": {
-          "label": "Stop Dev Mode"
+          "label": "Reset"
         }
       }
     }
