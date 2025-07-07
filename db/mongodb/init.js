@@ -97,8 +97,29 @@ db.runCommand({
           description: 'Documento com atributos específicos do produto (ex: cor, tamanho, etc)',
         },
         avaliacoes: {
-          bsonType: 'object',
-          description: 'Documento com informações de avaliações do produto',
+          bsonType: 'array',
+          description: 'Array de avaliações do produto',
+          items: {
+            bsonType: 'object',
+            required: ['id_cliente', 'nota'],
+            properties: {
+              id_cliente: {
+                bsonType: 'int',
+                description: 'ID do cliente que avaliou',
+              },
+              nota: {
+                bsonType: 'int',
+                minimum: 1,
+                maximum: 5,
+                description: 'Nota da avaliação (1 a 5)',
+              },
+              comentario: {
+                bsonType: 'string',
+                maxLength: 500,
+                description: 'Comentário opcional da avaliação',
+              },
+            },
+          },
         },
         created_at: {
           bsonType: 'date',
