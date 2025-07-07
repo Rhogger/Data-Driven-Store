@@ -1,6 +1,6 @@
-CREATE KEYSPACE IF NOT EXISTS datadriven WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+CREATE KEYSPACE IF NOT EXISTS datadriven_store WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 
-USE datadriven;
+USE datadriven_store;
 
 CREATE TABLE IF NOT EXISTS eventos_por_data (
     data_evento DATE,
