@@ -1,14 +1,12 @@
 import { Driver, Session } from 'neo4j-driver';
 import {
-  Cliente,
+  Customer,
   CreateNodeResult,
-  UpdateNodeResult,
-  DeleteNodeResult,
   CreateRelationshipResult,
-  RelacaoVisualizou,
-  RelacaoComprou,
-  RelacaoAvaliou,
-} from './interfaces/ModelInterfaces';
+  ViewRelation,
+  PurchaseRelation,
+  EvaluationRelation,
+} from '../interfaces/ModelInterfaces';
 
 export class ClienteRepository {
   private driver: Driver;
@@ -20,7 +18,7 @@ export class ClienteRepository {
   /**
    * Criar um nó de Cliente
    */
-  async createCliente(cliente: Cliente): Promise<CreateNodeResult> {
+  async createCliente(cliente: Customer): Promise<CreateNodeResult> {
     const session: Session = this.driver.session();
 
     try {
@@ -69,97 +67,12 @@ export class ClienteRepository {
   }
 
   /**
-   * Buscar cliente por ID
-   */
-  async getClienteById(id_cliente: string): Promise<Cliente | null> {
-    const session: Session = this.driver.session();
-
-    try {
-      const query = `
-        MATCH (c:Cliente {id_cliente: $id_cliente})
-        RETURN c.id_cliente as id_cliente,
-               c.nome as nome,
-               c.email as email,
-               c.telefone as telefone,
-               c.data_cadastro as data_cadastro
-      `;
-
-      const result = await session.run(query, { id_cliente });
-
-      if (result.records.length > 0) {
-        const record = result.records[0];
-        return {
-          id_cliente: record.get('id_cliente'),
-          nome: record.get('nome'),
-          email: record.get('email'),
-          telefone: record.get('telefone'),
-          data_cadastro: record.get('data_cadastro'),
-        };
-      }
-
-      return null;
-    } finally {
-      await session.close();
-    }
-  }
-
-  /**
-   * Atualizar dados do cliente
-   */
-  async updateCliente(
-    id_cliente: string,
-    updates: Partial<Omit<Cliente, 'id_cliente'>>,
-  ): Promise<UpdateNodeResult> {
-    const session: Session = this.driver.session();
-
-    try {
-      const setClause = Object.keys(updates)
-        .map((key) => `c.${key} = $${key}`)
-        .join(', ');
-
-      const query = `
-        MATCH (c:Cliente {id_cliente: $id_cliente})
-        SET ${setClause}
-        RETURN c.id_cliente as id_cliente
-      `;
-
-      const result = await session.run(query, {
-        id_cliente,
-        ...updates,
-      });
-
-      if (result.records.length > 0) {
-        return {
-          success: true,
-          updated: true,
-          message: 'Cliente atualizado com sucesso',
-          changes: updates,
-        };
-      }
-
-      return {
-        success: false,
-        updated: false,
-        message: 'Cliente não encontrado',
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        updated: false,
-        message: `Erro ao atualizar cliente: ${error.message}`,
-      };
-    } finally {
-      await session.close();
-    }
-  }
-
-  /**
-   * Criar relação VISUALIZOU de Cliente para Produto
+   * Criar a relação VISUALIZOU de Cliente para Produto
    */
   async createVisualizacaoRelation(
     id_cliente: string,
     id_produto: string,
-    relacao: RelacaoVisualizou,
+    dadosVisualizacao: ViewRelation,
   ): Promise<CreateRelationshipResult> {
     const session: Session = this.driver.session();
 
@@ -167,27 +80,31 @@ export class ClienteRepository {
       const query = `
         MATCH (c:Cliente {id_cliente: $id_cliente})
         MATCH (p:Produto {id_produto: $id_produto})
-        CREATE (c)-[r:VISUALIZOU {
-          data_visualizacao: $data_visualizacao,
-          duracao_segundos: $duracao_segundos,
-          origem: $origem
-        }]->(p)
-        RETURN r
+        MERGE (c)-[r:VISUALIZOU]->(p)
+        ON CREATE SET
+          r.data_visualizacao = $data_visualizacao,
+          r.duracao_segundos = $duracao_segundos,
+          r.origem = $origem
+        ON MATCH SET
+          r.data_visualizacao = $data_visualizacao,
+          r.duracao_segundos = $duracao_segundos,
+          r.origem = $origem
+        RETURN c.id_cliente as cliente_id, p.id_produto as produto_id
       `;
 
       const result = await session.run(query, {
         id_cliente,
         id_produto,
-        data_visualizacao: relacao.data_visualizacao,
-        duracao_segundos: relacao.duracao_segundos || null,
-        origem: relacao.origem || null,
+        data_visualizacao: dadosVisualizacao.data_visualizacao,
+        duracao_segundos: dadosVisualizacao.duracao_segundos || null,
+        origem: dadosVisualizacao.origem || null,
       });
 
       if (result.records.length > 0) {
         return {
           success: true,
           relationship_created: true,
-          message: 'Relação VISUALIZOU criada com sucesso',
+          message: 'Relação de visualização criada com sucesso',
           from_node: id_cliente,
           to_node: id_produto,
           relationship_type: 'VISUALIZOU',
@@ -197,7 +114,7 @@ export class ClienteRepository {
       return {
         success: false,
         relationship_created: false,
-        message: 'Falha ao criar relação VISUALIZOU',
+        message: 'Falha ao criar relação de visualização - Cliente ou Produto não encontrado',
         from_node: id_cliente,
         to_node: id_produto,
         relationship_type: 'VISUALIZOU',
@@ -206,7 +123,7 @@ export class ClienteRepository {
       return {
         success: false,
         relationship_created: false,
-        message: `Erro ao criar relação VISUALIZOU: ${error.message}`,
+        message: `Erro ao criar relação de visualização: ${error.message}`,
         from_node: id_cliente,
         to_node: id_produto,
         relationship_type: 'VISUALIZOU',
@@ -217,12 +134,12 @@ export class ClienteRepository {
   }
 
   /**
-   * Criar relação COMPROU de Cliente para Produto
+   * Criar a relação COMPROU de Cliente para Produto
    */
   async createCompraRelation(
     id_cliente: string,
     id_produto: string,
-    relacao: RelacaoComprou,
+    dadosCompra: PurchaseRelation,
   ): Promise<CreateRelationshipResult> {
     const session: Session = this.driver.session();
 
@@ -237,24 +154,24 @@ export class ClienteRepository {
           desconto: $desconto,
           id_pedido: $id_pedido
         }]->(p)
-        RETURN r
+        RETURN c.id_cliente as cliente_id, p.id_produto as produto_id
       `;
 
       const result = await session.run(query, {
         id_cliente,
         id_produto,
-        data_pedido: relacao.data_pedido,
-        quantidade: relacao.quantidade,
-        preco_unitario: relacao.preco_unitario,
-        desconto: relacao.desconto || null,
-        id_pedido: relacao.id_pedido,
+        data_pedido: dadosCompra.data_pedido,
+        quantidade: dadosCompra.quantidade,
+        preco_unitario: dadosCompra.preco_unitario,
+        desconto: dadosCompra.desconto || null,
+        id_pedido: dadosCompra.id_pedido,
       });
 
       if (result.records.length > 0) {
         return {
           success: true,
           relationship_created: true,
-          message: 'Relação COMPROU criada com sucesso',
+          message: 'Relação de compra criada com sucesso',
           from_node: id_cliente,
           to_node: id_produto,
           relationship_type: 'COMPROU',
@@ -264,7 +181,7 @@ export class ClienteRepository {
       return {
         success: false,
         relationship_created: false,
-        message: 'Falha ao criar relação COMPROU',
+        message: 'Falha ao criar relação de compra - Cliente ou Produto não encontrado',
         from_node: id_cliente,
         to_node: id_produto,
         relationship_type: 'COMPROU',
@@ -273,7 +190,7 @@ export class ClienteRepository {
       return {
         success: false,
         relationship_created: false,
-        message: `Erro ao criar relação COMPROU: ${error.message}`,
+        message: `Erro ao criar relação de compra: ${error.message}`,
         from_node: id_cliente,
         to_node: id_produto,
         relationship_type: 'COMPROU',
@@ -284,12 +201,12 @@ export class ClienteRepository {
   }
 
   /**
-   * Criar relação AVALIOU de Cliente para Produto
+   * Criar a relação AVALIOU de Cliente para Produto
    */
   async createAvaliacaoRelation(
     id_cliente: string,
     id_produto: string,
-    relacao: RelacaoAvaliou,
+    dadosAvaliacao: EvaluationRelation,
   ): Promise<CreateRelationshipResult> {
     const session: Session = this.driver.session();
 
@@ -297,29 +214,34 @@ export class ClienteRepository {
       const query = `
         MATCH (c:Cliente {id_cliente: $id_cliente})
         MATCH (p:Produto {id_produto: $id_produto})
-        CREATE (c)-[r:AVALIOU {
-          nota: $nota,
-          comentario: $comentario,
-          data: $data,
-          verificada: $verificada
-        }]->(p)
-        RETURN r
+        MERGE (c)-[r:AVALIOU]->(p)
+        ON CREATE SET
+          r.nota = $nota,
+          r.comentario = $comentario,
+          r.data = $data,
+          r.verificada = $verificada
+        ON MATCH SET
+          r.nota = $nota,
+          r.comentario = $comentario,
+          r.data = $data,
+          r.verificada = $verificada
+        RETURN c.id_cliente as cliente_id, p.id_produto as produto_id
       `;
 
       const result = await session.run(query, {
         id_cliente,
         id_produto,
-        nota: relacao.nota,
-        comentario: relacao.comentario || null,
-        data: relacao.data,
-        verificada: relacao.verificada || false,
+        nota: dadosAvaliacao.nota,
+        comentario: dadosAvaliacao.comentario || null,
+        data: dadosAvaliacao.data,
+        verificada: dadosAvaliacao.verificada || false,
       });
 
       if (result.records.length > 0) {
         return {
           success: true,
           relationship_created: true,
-          message: 'Relação AVALIOU criada com sucesso',
+          message: 'Relação de avaliação criada com sucesso',
           from_node: id_cliente,
           to_node: id_produto,
           relationship_type: 'AVALIOU',
@@ -329,7 +251,7 @@ export class ClienteRepository {
       return {
         success: false,
         relationship_created: false,
-        message: 'Falha ao criar relação AVALIOU',
+        message: 'Falha ao criar relação de avaliação - Cliente ou Produto não encontrado',
         from_node: id_cliente,
         to_node: id_produto,
         relationship_type: 'AVALIOU',
@@ -338,52 +260,10 @@ export class ClienteRepository {
       return {
         success: false,
         relationship_created: false,
-        message: `Erro ao criar relação AVALIOU: ${error.message}`,
+        message: `Erro ao criar relação de avaliação: ${error.message}`,
         from_node: id_cliente,
         to_node: id_produto,
         relationship_type: 'AVALIOU',
-      };
-    } finally {
-      await session.close();
-    }
-  }
-
-  /**
-   * Deletar cliente e todas suas relações
-   */
-  async deleteCliente(id_cliente: string): Promise<DeleteNodeResult> {
-    const session: Session = this.driver.session();
-
-    try {
-      const query = `
-        MATCH (c:Cliente {id_cliente: $id_cliente})
-        OPTIONAL MATCH (c)-[r]-()
-        WITH c, count(r) as relationships_count
-        DETACH DELETE c
-        RETURN relationships_count
-      `;
-
-      const result = await session.run(query, { id_cliente });
-
-      if (result.records.length > 0) {
-        return {
-          success: true,
-          deleted: true,
-          message: 'Cliente deletado com sucesso',
-          relationships_deleted: result.records[0].get('relationships_count').toNumber(),
-        };
-      }
-
-      return {
-        success: false,
-        deleted: false,
-        message: 'Cliente não encontrado',
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        deleted: false,
-        message: `Erro ao deletar cliente: ${error.message}`,
       };
     } finally {
       await session.close();

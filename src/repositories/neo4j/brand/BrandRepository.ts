@@ -1,6 +1,6 @@
 import { Driver, Session } from 'neo4j-driver';
 import {
-  Marca,
+  Brand,
   CreateNodeResult,
   UpdateNodeResult,
   DeleteNodeResult,
@@ -14,9 +14,9 @@ export class MarcaRepository {
   }
 
   /**
-   * Criar um nó de Marca
+   * Criar o nó de Marca
    */
-  async createMarca(marca: Marca): Promise<CreateNodeResult> {
+  async createMarca(marca: Brand): Promise<CreateNodeResult> {
     const session: Session = this.driver.session();
 
     try {
@@ -57,70 +57,6 @@ export class MarcaRepository {
         created: false,
         message: `Erro ao criar marca: ${error.message}`,
       };
-    } finally {
-      await session.close();
-    }
-  }
-
-  /**
-   * Buscar marca por ID
-   */
-  async getMarcaById(id_marca: string): Promise<Marca | null> {
-    const session: Session = this.driver.session();
-
-    try {
-      const query = `
-        MATCH (m:Marca {id_marca: $id_marca})
-        RETURN m.id_marca as id_marca,
-               m.nome as nome,
-               m.descricao as descricao,
-               m.ativa as ativa
-      `;
-
-      const result = await session.run(query, { id_marca });
-
-      if (result.records.length > 0) {
-        const record = result.records[0];
-        return {
-          id_marca: record.get('id_marca'),
-          nome: record.get('nome'),
-          descricao: record.get('descricao'),
-          ativa: record.get('ativa'),
-        };
-      }
-
-      return null;
-    } finally {
-      await session.close();
-    }
-  }
-
-  /**
-   * Listar todas as marcas
-   */
-  async listMarcas(ativas_apenas: boolean = false): Promise<Marca[]> {
-    const session: Session = this.driver.session();
-
-    try {
-      const whereClause = ativas_apenas ? 'WHERE m.ativa = true' : '';
-      const query = `
-        MATCH (m:Marca)
-        ${whereClause}
-        RETURN m.id_marca as id_marca,
-               m.nome as nome,
-               m.descricao as descricao,
-               m.ativa as ativa
-        ORDER BY m.nome ASC
-      `;
-
-      const result = await session.run(query);
-
-      return result.records.map((record) => ({
-        id_marca: record.get('id_marca'),
-        nome: record.get('nome'),
-        descricao: record.get('descricao'),
-        ativa: record.get('ativa'),
-      }));
     } finally {
       await session.close();
     }
@@ -170,105 +106,61 @@ export class MarcaRepository {
   }
 
   /**
-   * Atualizar marca
+   * Deletar Marca (SOMENTE se não tiver relação com nenhum produto)
    */
-  async updateMarca(
-    id_marca: string,
-    updates: Partial<Omit<Marca, 'id_marca'>>,
-  ): Promise<UpdateNodeResult> {
+  async deleteMarca(id_marca: string): Promise<DeleteNodeResult> {
     const session: Session = this.driver.session();
 
     try {
-      const setClause = Object.keys(updates)
-        .map((key) => `m.${key} = $${key}`)
-        .join(', ');
-
-      const query = `
+      // Primeiro verifica se a marca tem relações com produtos
+      const checkQuery = `
         MATCH (m:Marca {id_marca: $id_marca})
-        SET ${setClause}
-        RETURN m.id_marca as id_marca
+        OPTIONAL MATCH (p:Produto)-[:PRODUZIDO_POR]->(m)
+        RETURN m, count(p) as product_count
       `;
 
-      const result = await session.run(query, {
-        id_marca,
-        ...updates,
-      });
+      const checkResult = await session.run(checkQuery, { id_marca });
 
-      if (result.records.length > 0) {
+      if (checkResult.records.length === 0) {
         return {
-          success: true,
-          updated: true,
-          message: 'Marca atualizada com sucesso',
-          changes: updates,
+          success: false,
+          deleted: false,
+          message: 'Marca não encontrada',
         };
       }
 
-      return {
-        success: false,
-        updated: false,
-        message: 'Marca não encontrada',
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        updated: false,
-        message: `Erro ao atualizar marca: ${error.message}`,
-      };
-    } finally {
-      await session.close();
-    }
-  }
+      const productCount = checkResult.records[0].get('product_count').toNumber();
 
-  /**
-   * Deletar marca (apenas se não houver produtos associados)
-   */
-  async deleteMarca(id_marca: string, force: boolean = false): Promise<DeleteNodeResult> {
-    const session: Session = this.driver.session();
-
-    try {
-      if (!force) {
-        // Verifica se há produtos associados
-        const checkQuery = `
-          MATCH (m:Marca {id_marca: $id_marca})
-          OPTIONAL MATCH (p:Produto)-[:PRODUZIDO_POR]->(m)
-          RETURN count(p) as produtos_count
-        `;
-
-        const checkResult = await session.run(checkQuery, { id_marca });
-        const produtosCount = checkResult.records[0]?.get('produtos_count').toNumber() || 0;
-
-        if (produtosCount > 0) {
-          return {
-            success: false,
-            deleted: false,
-            message: `Não é possível deletar marca. Há ${produtosCount} produto(s) associado(s).`,
-          };
-        }
+      if (productCount > 0) {
+        return {
+          success: false,
+          deleted: false,
+          message: `Não é possível deletar a marca. Existe(m) ${productCount} produto(s) relacionado(s)`,
+        };
       }
 
-      const query = `
+      // Se não tem produtos relacionados, pode deletar
+      const deleteQuery = `
         MATCH (m:Marca {id_marca: $id_marca})
-        OPTIONAL MATCH (m)-[r]-()
-        WITH m, count(r) as relationships_count
         DETACH DELETE m
-        RETURN relationships_count
+        RETURN count(m) as deleted_count
       `;
 
-      const result = await session.run(query, { id_marca });
+      const deleteResult = await session.run(deleteQuery, { id_marca });
+      const deletedCount = deleteResult.records[0].get('deleted_count').toNumber();
 
-      if (result.records.length > 0) {
+      if (deletedCount > 0) {
         return {
           success: true,
           deleted: true,
           message: 'Marca deletada com sucesso',
-          relationships_deleted: result.records[0].get('relationships_count').toNumber(),
         };
       }
 
       return {
         success: false,
         deleted: false,
-        message: 'Marca não encontrada',
+        message: 'Falha ao deletar marca',
       };
     } catch (error: any) {
       return {

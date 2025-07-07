@@ -1,6 +1,6 @@
 // Interfaces para os nós do grafo Neo4j
 
-export interface Cliente {
+export interface Customer {
   id_cliente: string;
   nome: string;
   email: string;
@@ -8,14 +8,14 @@ export interface Cliente {
   data_cadastro: string;
 }
 
-export interface Categoria {
+export interface Category {
   id_categoria: string;
   nome: string;
   descricao?: string;
   ativa: boolean;
 }
 
-export interface Produto {
+export interface Product {
   id_produto: string;
   nome: string;
   descricao?: string;
@@ -25,7 +25,7 @@ export interface Produto {
   data_criacao: string;
 }
 
-export interface Marca {
+export interface Brand {
   id_marca: string;
   nome: string;
   descricao?: string;
@@ -34,13 +34,13 @@ export interface Marca {
 
 // Interfaces para os relacionamentos
 
-export interface RelacaoVisualizou {
+export interface ViewRelation {
   data_visualizacao: string;
   duracao_segundos?: number;
   origem?: string; // web, mobile, app
 }
 
-export interface RelacaoComprou {
+export interface PurchaseRelation {
   data_pedido: string;
   quantidade: number;
   preco_unitario: number;
@@ -48,18 +48,18 @@ export interface RelacaoComprou {
   id_pedido: string;
 }
 
-export interface RelacaoAvaliou {
+export interface EvaluationRelation {
   nota: number; // 1-5
   comentario?: string;
   data: string;
   verificada?: boolean;
 }
 
-export interface RelacaoPertenceA {
+export interface CategoryAssociation {
   categoria_principal?: boolean;
 }
 
-export interface RelacaoProduzidoPor {
+export interface CreatedByRelation {
   data_lancamento?: string;
 }
 
