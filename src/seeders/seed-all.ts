@@ -4,7 +4,7 @@ import { MongoClient, ObjectId } from 'mongodb';
 import { Pool } from 'pg';
 import neo4j from 'neo4j-driver';
 import Redis from 'ioredis';
-import { databaseConfig } from '../../src/config/database';
+import { databaseConfig } from '@config/database';
 
 // Tipos para clareza
 type Product = {
@@ -505,59 +505,72 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
 async function seedRedis(redis: Redis, clientIds: number[], products: Product[]) {
   console.log('🌱 [Redis] Iniciando seed...');
   try {
+    // --- Configurações de Quantidade ---
+    const NUM_SESSIONS_TO_SIMULATE = 5;
+    const NUM_CARTS_TO_CREATE = 8;
+    const NUM_PRODUCTS_TO_CACHE = 10;
+    const NUM_PRODUCTS_IN_RANKING = 15;
+    const NUM_PRODUCTS_WITH_VIEWS = 15;
+
     // 1. Limpar o banco de dados atual para garantir idempotência
     await redis.flushdb();
     console.log('   -> 🧹 Banco de dados Redis limpo.');
 
     // Cenário 1: Simular login de usuário (SET com expiração)
-    const randomClientIdForSession = clientIds[Math.floor(Math.random() * clientIds.length)];
-    const sessionKey = `session:${randomClientIdForSession}`;
-    const sessionData = JSON.stringify({
-      userId: randomClientIdForSession,
-      loggedInAt: new Date().toISOString(),
-    });
-    // Expira em 1 hora
-    await redis.set(sessionKey, sessionData, 'EX', 3600);
-    console.log(`   -> 👤 Sessão de usuário simulada para o cliente ${randomClientIdForSession}.`);
+    console.log(`   -> 👤 Simulando ${NUM_SESSIONS_TO_SIMULATE} sessões de usuário...`);
+    for (let i = 0; i < NUM_SESSIONS_TO_SIMULATE; i++) {
+      const clientId = clientIds[i % clientIds.length];
+      const sessionKey = `session:${clientId}`;
+      const sessionData = JSON.stringify({
+        userId: clientId,
+        loggedInAt: new Date().toISOString(),
+      });
+      await redis.set(sessionKey, sessionData, 'EX', 3600); // Expira em 1 hora
+    }
 
     // Cenário 2: Gerenciar um carrinho de compras (HASH)
-    const randomClientIdForCart = clientIds[Math.floor(Math.random() * clientIds.length)];
-    const cartKey = `cart:${randomClientIdForCart}`;
-    const product1 = products[0];
-    const product2 = products[1];
-    // Usando HSET para mapear productId -> quantidade
-    await redis.hset(cartKey, {
-      [product1._id.toHexString()]: '1', // 1 unidade do produto 1
-      [product2._id.toHexString()]: '2', // 2 unidades do produto 2
-    });
-    console.log(`   -> 🛒 Carrinho de compras criado para o cliente ${randomClientIdForCart}.`);
+    console.log(`   -> 🛒 Criando ${NUM_CARTS_TO_CREATE} carrinhos de compras...`);
+    for (let i = 0; i < NUM_CARTS_TO_CREATE; i++) {
+      const clientId = clientIds[i % clientIds.length];
+      const cartKey = `cart:${clientId}`;
+      const numItemsInCart = Math.floor(Math.random() * 4) + 1; // 1 a 4 itens
+      const cartItems: { [key: string]: string } = {};
+      for (let j = 0; j < numItemsInCart; j++) {
+        const product = products[Math.floor(Math.random() * products.length)];
+        cartItems[product._id.toHexString()] = (Math.floor(Math.random() * 3) + 1).toString();
+      }
+      await redis.hset(cartKey, cartItems);
+    }
 
     // Cenário 3: Implementar cache de produtos
-    const productToCache = products[Math.floor(Math.random() * products.length)];
-    const productCacheKey = `product:${productToCache._id.toHexString()}`;
-    // Cache expira em 5 minutos
-    await redis.set(productCacheKey, JSON.stringify(productToCache), 'EX', 300);
-    console.log(`   -> 📦 Produto "${productToCache.nome}" colocado em cache.`);
+    console.log(`   -> 📦 Colocando ${NUM_PRODUCTS_TO_CACHE} produtos em cache...`);
+    for (let i = 0; i < NUM_PRODUCTS_TO_CACHE; i++) {
+      const productToCache = products[i % products.length];
+      const productCacheKey = `product:${productToCache._id.toHexString()}`;
+      await redis.set(productCacheKey, JSON.stringify(productToCache), 'EX', 300); // Cache expira em 5 minutos
+    }
 
     // Cenário 4: Manter um ranking de produtos mais vistos (Sorted Set)
     const rankingKey = 'products:ranking:views';
-    const productsForRanking = products.slice(0, 5); // Pegar os 5 primeiros produtos
+    const productsForRanking = products.slice(0, NUM_PRODUCTS_IN_RANKING);
     const rankingPromises = productsForRanking.map((p) => {
       const randomViews = Math.floor(Math.random() * 1000) + 50; // Vistas entre 50 e 1050
       return redis.zadd(rankingKey, randomViews, p._id.toHexString());
     });
     await Promise.all(rankingPromises);
     console.log(
-      `   -> 🏆 Ranking de produtos mais vistos criado com ${productsForRanking.length} produtos.`,
+      `   -> 🏆 Ranking de produtos mais vistos criado com ${NUM_PRODUCTS_IN_RANKING} produtos.`,
     );
 
     // Cenário 5: Contar visualizações de página de um produto (INCR)
-    const productForViews = products[Math.floor(Math.random() * products.length)];
-    const viewsKey = `product:views:${productForViews._id.toHexString()}`;
-    await redis.incrby(viewsKey, Math.floor(Math.random() * 50) + 1); // Incrementa um valor aleatório
     console.log(
-      `   -> 👁️  Contador de visualizações iniciado para o produto "${productForViews.nome}".`,
+      `   -> 👁️  Incrementando visualizações para ${NUM_PRODUCTS_WITH_VIEWS} produtos...`,
     );
+    for (let i = 0; i < NUM_PRODUCTS_WITH_VIEWS; i++) {
+      const productForViews = products[i % products.length];
+      const viewsKey = `product:views:${productForViews._id.toHexString()}`;
+      await redis.incrby(viewsKey, Math.floor(Math.random() * 50) + 1); // Incrementa um valor aleatório
+    }
 
     console.log('✅ [Redis] Seed concluído com sucesso.');
   } catch (error) {

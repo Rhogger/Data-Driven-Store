@@ -28,6 +28,7 @@ wait_for_healthy_container() {
 # A cláusula depends_on no docker-compose já faz isso, mas uma verificação extra é segura.
 wait_for_healthy_container "mongo"
 wait_for_healthy_container "postgres"
+wait_for_healthy_container "redis"
 wait_for_healthy_container "neo4j"
 
 # 2. Executar o script de seed orquestrado via pnpm
