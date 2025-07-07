@@ -2,21 +2,21 @@
   "extends": "@tsconfig/node24/tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "declaration": false,
     "noEmit": false,
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@config/*": ["./config/*"],
-      "@plugins/*": ["./plugins/*"],
-      "@repositories/*": ["./repositories/*"],
-      "@routes/*": ["./routes/*"]
+      "@/*": ["src/*"],
+      "@config/*": ["src/config/*"],
+      "@plugins/*": ["src/plugins/*"],
+      "@repositories/*": ["src/repositories/*"],
+      "@routes/*": ["src/routes/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.sql"],
+  "include": ["src/**/*.ts", "db/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

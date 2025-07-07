@@ -30,7 +30,7 @@ print(`✅ Usuário da aplicação '${appUser}' criado com sucesso no banco '${d
 print('📦 Configurando collection products...');
 
 // Criar indexes para otimizar consultas
-db.products.createIndex({ id_categoria: 1 }, { name: 'idx_products_id_categoria' });
+db.products.createIndex({ categorias: 1 }, { name: 'idx_products_categorias' });
 db.products.createIndex({ nome: 'text', descricao: 'text' }, { name: 'idx_products_text_search' });
 db.products.createIndex({ marca: 1 }, { name: 'idx_products_marca' });
 db.products.createIndex({ preco: 1 }, { name: 'idx_products_preco' });
@@ -44,7 +44,7 @@ db.runCommand({
   validator: {
     $jsonSchema: {
       bsonType: 'object',
-      required: ['nome', 'preco', 'id_categoria', 'estoque'],
+      required: ['nome', 'preco', 'categorias', 'estoque'],
       properties: {
         nome: {
           bsonType: 'string',
@@ -67,10 +67,15 @@ db.runCommand({
           minimum: 0,
           description: 'Preço deve ser um número positivo',
         },
-        id_categoria: {
-          bsonType: 'int',
-          minimum: 1,
-          description: 'ID da categoria é obrigatório e deve ser um inteiro positivo',
+        categorias: {
+          bsonType: 'array',
+          minItems: 1,
+          description: 'Deve conter um array de IDs de categoria',
+          items: {
+            bsonType: 'int',
+            minimum: 1,
+            description: 'ID da categoria deve ser um inteiro positivo',
+          },
         },
         estoque: {
           bsonType: 'int',

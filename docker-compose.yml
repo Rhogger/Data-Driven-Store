@@ -11,7 +11,7 @@ services:
       - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/postgres:/docker-entrypoint-initdb.d
+      - ./db/postgres:/docker-entrypoint-initdb.d:ro
     networks:
       - datastore-network
     restart: unless-stopped
@@ -34,8 +34,7 @@ services:
       - '27017:27017'
     volumes:
       - mongo_data:/data/db
-      - ./db/mongodb/init.js:/docker-entrypoint-initdb.d/init.js:ro
-      - ./db/mongodb/seed.js:/docker-entrypoint-initdb.d/seed.js:ro
+      - ./db/mongodb:/docker-entrypoint-initdb.d:ro
     networks:
       - datastore-network
     restart: unless-stopped

@@ -5,103 +5,66 @@ if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
 fi
 
+# Determinar modo (Produção/Desenvolvimento)
+if [ "${NODE_ENV}" = "development" ]; then
+    MODE_NAME="DESENVOLVIMENTO"
+else
+    MODE_NAME="PRODUÇÃO"
+fi
+
 echo "=========================================="
 echo "   DATA-DRIVEN STORE - RESET DOCKER"
 echo "=========================================="
-echo "📁 Diretório: $(pwd)"
-echo "🕒 Data/Hora: $(date)"
-echo ""
-
-# --- Usar APENAS NODE_ENV para determinar o modo ---
-if [ "${NODE_ENV}" = "development" ]; then
-    echo "🔥 CONFIGURANDO MODO DESENVOLVIMENTO (HOT RELOAD)"
-    MODE_NAME="DESENVOLVIMENTO"
-    MODE_EMOJI="🔥"
-else
-    echo "🏗️ CONFIGURANDO MODO PRODUÇÃO (BUILD)"
-    MODE_NAME="PRODUÇÃO"
-    MODE_EMOJI="🏗️"
-fi
-
-echo ""
-echo "🎯 MODO ATIVO: $MODE_NAME $MODE_EMOJI"
-echo "🌍 NODE_ENV: $NODE_ENV"
+echo "🎯 MODO ATIVO: $MODE_NAME"
 echo "=========================================="
 echo ""
 
-# --- Configurações ---
-API_SERVICE_NAME="dds_api"
-
+# --- SEÇÃO DE LIMPEZA ---
 echo "🔥 === RESET COMPLETO DO AMBIENTE DOCKER === 🔥"
-echo "📦 Projeto: Data-Driven Store"
-echo "⚠️  Este script irá remover TODOS os containers, volumes e imagens do projeto"
-echo ""
-
-echo "🔧 0. Corrigindo permissões dos diretórios de banco de dados..."
+echo "🔧 Corrigindo permissões..."
 ./fix-permissions.sh
-echo "✅ Permissões corrigidas"
-
-echo "🧹 1. Derrubando e removendo containers e volumes do Docker Compose..."
+echo "🧹 Derrubando e removendo ambiente anterior..."
 docker compose down -v --rmi all
-
-if [ $? -ne 0 ]; then
-    echo "⚠️  Erro ao derrubar Docker Compose. Tentando continuar a limpeza..."
-fi
-echo "✅ Containers do Compose removidos"
-
-echo "🧹 2. Removendo containers parados restantes..."
+echo "🧹 Removendo caches do Docker..."
 docker container prune -f
-echo "✅ Containers parados removidos"
-
-echo "🧹 3. Removendo volumes não utilizados..."
 docker volume prune -f
-echo "✅ Volumes não utilizados removidos"
-
-echo "🧹 4. Removendo redes não utilizadas..."
 docker network prune -f
-echo "✅ Redes não utilizadas removidas"
-
-echo "🧹 5. Removendo cache de build do Docker..."
 docker builder prune -f
-echo "✅ Cache de build removido"
-
+echo "✅ Limpeza concluída."
 echo ""
+
+# --- SEÇÃO DE RECONSTRUÇÃO ---
 echo "🔧 === RECONSTRUINDO AMBIENTE EM MODO $MODE_NAME === 🔧"
 
-if [ "$NODE_ENV" = "development" ]; then
-    echo "🏗️  1. Reconstruindo a imagem da API sem cache (MODO DESENVOLVIMENTO)..."
-else
-    echo "🏗️  1. Reconstruindo a imagem da API sem cache (MODO PRODUÇÃO)..."
-fi
-
-docker compose build --no-cache "$API_SERVICE_NAME"
-
+# PASSO 1: Compilar o código TypeScript (gera a pasta 'dist')
+echo "📦 1. Compilando o projeto TypeScript..."
+pnpm run build
 if [ $? -ne 0 ]; then
-    echo "❌ ERRO: Falha ao reconstruir a imagem da API"
+    echo "❌ ERRO: Falha ao compilar o projeto. Verifique os logs."
     exit 1
 fi
-echo "✅ Imagem da API reconstruída"
+echo "✅ Projeto compilado com sucesso."
 
-echo "🚀 2. Subindo todos os serviços em modo $MODE_NAME..."
-docker compose up -d "$API_SERVICE_NAME"
-
+# PASSO 2: Reconstruir a imagem e subir o ambiente
+echo "🚀 2. Reconstruindo imagem e subindo serviços..."
+docker compose up -d --build --force-recreate
 if [ $? -ne 0 ]; then
-    echo "❌ ERRO: Falha ao subir o ambiente Docker"
+    echo "❌ ERRO: Falha ao subir o ambiente Docker."
     exit 1
 fi
-echo "✅ Serviços iniciados"
+echo "✅ Serviços iniciados."
 
+# PASSO 3: Popular os bancos de dados
+echo "🌱 3. Populando bancos de dados..."
+./seed.sh
+if [ $? -ne 0 ]; then
+    echo "❌ ERRO: Falha ao popular os bancos de dados."
+    exit 1
+fi
+
+# --- MENSAGEM FINAL ---
 echo ""
 echo "🎉 RESET CONCLUÍDO COM SUCESSO! 🎉"
-if [ "$NODE_ENV" = "development" ]; then
-    echo "✅ Ambiente de desenvolvimento com HOT RELOAD pronto!"
-    echo "📝 Agora você pode editar arquivos em src/ e as mudanças serão refletidas automaticamente!"
-else
-    echo "✅ Ambiente de produção pronto!"
-    echo "📝 Aplicação rodando em modo produção (build compilado)"
-fi
-echo "📋 Verificando logs da API..."
-echo "💡 Pressione Ctrl+C para parar os logs"
+echo "📋 Verificando logs da API... (Pressione Ctrl+C para parar)"
 echo ""
-
-docker compose logs -f "$API_SERVICE_NAME"
+docker compose logs -f dds_api
