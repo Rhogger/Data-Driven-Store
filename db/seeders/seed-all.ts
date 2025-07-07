@@ -1,9 +1,10 @@
 /* eslint-disable quotes */
 /* eslint-disable no-console */
 import { MongoClient, ObjectId } from 'mongodb';
-import { Pool, PoolClient } from 'pg';
+import { Pool } from 'pg';
 import neo4j from 'neo4j-driver';
-import { databaseConfig } from '../../src/config/database';
+import Redis from 'ioredis';
+import { databaseConfig } from '@config/database';
 
 // Tipos para clareza
 type Product = {
@@ -16,7 +17,7 @@ type Product = {
   estoque: number;
   reservado: number;
   disponivel: number;
-  avaliacoes: { id_cliente: number; nota: number; comentario?: string }[];
+  avaliacoes: { id_cliente: number; nota: number; comentario?: string; data_avaliacao: Date }[];
   created_at: Date;
   updated_at: Date;
 };
@@ -91,34 +92,28 @@ async function seedPostgresBase(
     console.log('   -> Métodos de pagamento inseridos.');
 
     // 4. Categorias
-    const categoriasBase = [
+    const allCategoriesNames = [
       'Eletrônicos',
       'Livros',
       'Roupas',
       'Casa e Cozinha',
       'Esportes e Lazer',
       'Ferramentas',
+      // Antigas subcategorias agora são categorias principais
+      'Smartphones',
+      'Notebooks',
+      'Fones de Ouvido',
+      'Ficção Científica',
+      'Fantasia',
+      'Técnico',
+      'Camisetas',
+      'Calças',
     ];
-    const subcategorias = {
-      Eletrônicos: ['Smartphones', 'Notebooks', 'Fones de Ouvido'],
-      Livros: ['Ficção Científica', 'Fantasia', 'Técnico'],
-      Roupas: ['Camisetas', 'Calças'],
-    };
 
-    for (const nomeCat of categoriasBase) {
-      const res = await client.query(
-        'INSERT INTO categorias (nome) VALUES ($1) ON CONFLICT DO NOTHING RETURNING id_categoria',
-        [nomeCat],
-      );
-      if (res.rows.length > 0 && subcategorias[nomeCat as keyof typeof subcategorias]) {
-        const idPai = res.rows[0].id_categoria;
-        for (const nomeSub of subcategorias[nomeCat as keyof typeof subcategorias]) {
-          await client.query(
-            'INSERT INTO categorias (nome, id_categoria_pai) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-            [nomeSub, idPai],
-          );
-        }
-      }
+    for (const nomeCat of allCategoriesNames) {
+      await client.query('INSERT INTO categorias (nome) VALUES ($1) ON CONFLICT DO NOTHING', [
+        nomeCat,
+      ]);
     }
     console.log('   -> Categorias inseridas.');
 
@@ -211,7 +206,7 @@ function getRandomCategories(allCategoryIds: number[], count: number): number[] 
 // Função auxiliar para gerar avaliações aleatórias
 function generateRandomReviews(
   clientIds: number[],
-): { id_cliente: number; nota: number; comentario: string }[] {
+): { id_cliente: number; nota: number; comentario: string; data_avaliacao: Date }[] {
   const reviews = [];
   const numReviews = Math.floor(Math.random() * 6); // 0 a 5 reviews
   if (numReviews === 0 || clientIds.length === 0) {
@@ -234,6 +229,7 @@ function generateRandomReviews(
       id_cliente: clientId,
       nota: Math.floor(Math.random() * 5) + 1, // Nota de 1 a 5
       comentario: comentarios[Math.floor(Math.random() * comentarios.length)],
+      data_avaliacao: new Date(Date.now() - Math.floor(Math.random() * 60) * 24 * 60 * 60 * 1000), // Data aleatória nos últimos 60 dias
     });
   }
   return reviews;
@@ -299,12 +295,42 @@ async function seedMongo(
   return insertedProducts;
 }
 
+async function seedUserPreferences(
+  mongoClient: MongoClient,
+  { categoryIds, clientIds }: { categoryIds: number[]; clientIds: number[] },
+) {
+  console.log('🌱 [Mongo] Iniciando seed de preferências de usuário...');
+  const db = mongoClient.db(databaseConfig.mongodb.database);
+  const preferencesCollection = db.collection('user_preferences');
+
+  await preferencesCollection.deleteMany({});
+  console.log('🧹 [Mongo] Coleção de preferências de usuário limpa.');
+
+  const preferencesToInsert = [];
+  for (const clientId of clientIds) {
+    preferencesToInsert.push({
+      id_cliente: clientId,
+      // Pega de 1 a 4 categorias aleatórias para cada usuário
+      preferencias: getRandomCategories(categoryIds, Math.floor(Math.random() * 4) + 1),
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+  }
+
+  if (preferencesToInsert.length > 0) {
+    const result = await preferencesCollection.insertMany(preferencesToInsert);
+    console.log(`✅ [Mongo] ${result.insertedCount} preferências de usuário inseridas.`);
+  } else {
+    console.log('⚠️ [Mongo] Nenhum cliente encontrado para criar preferências.');
+  }
+}
+
 async function seedPostgresOrders(pgPool: Pool, products: Product[]) {
   console.log('🌱 [PG] Iniciando seed de Pedidos...');
   const statusPedidosArr = ['Pendente', 'Processando', 'Enviado', 'Entregue', 'Cancelado'];
 
   for (let i = 1; i <= TOTAL_ORDERS; i++) {
-    const pgClient: PoolClient = await pgPool.connect();
+    const pgClient = await pgPool.connect();
     try {
       await pgClient.query('BEGIN');
 
@@ -402,9 +428,7 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
 
     // 2. Buscar dados de base do PostgreSQL
     const { rows: clients } = await pgPool.query('SELECT id_cliente, nome FROM clientes');
-    const { rows: categories } = await pgPool.query(
-      'SELECT id_categoria, nome, id_categoria_pai FROM categorias',
-    );
+    const { rows: categories } = await pgPool.query('SELECT id_categoria, nome FROM categorias');
     const { rows: orderItems } = await pgPool.query(`
       SELECT p.id_cliente, ip.id_produto, p.data_pedido, ip.quantidade
       FROM itens_pedido ip
@@ -422,7 +446,6 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
     const categoriesForNeo4j = categories.map((cat) => ({
       ...cat,
       id_categoria: neo4j.int(cat.id_categoria),
-      id_categoria_pai: cat.id_categoria_pai ? neo4j.int(cat.id_categoria_pai) : null,
     }));
 
     const marcas = [...new Set(products.map((p) => p.marca))];
@@ -452,14 +475,6 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
 
     // 4. Criar relacionamentos
     console.log('   -> 🔗 Criando relacionamentos...');
-    // Categorias -> Subcategorias
-    await session.run(
-      `UNWIND $categories as cat
-       MATCH (pai:Categoria {id_categoria: cat.id_categoria_pai}), (filha:Categoria {id_categoria: cat.id_categoria})
-       WHERE cat.id_categoria_pai IS NOT NULL
-       MERGE (pai)-[:PAI_DE]->(filha)`,
-      { categories: categoriesForNeo4j },
-    );
 
     // Produtos -> Categorias e Marcas
     const productRelations = products.map((p) => ({
@@ -501,10 +516,88 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
   }
 }
 
+async function seedRedis(redis: Redis, clientIds: number[], products: Product[]) {
+  console.log('🌱 [Redis] Iniciando seed...');
+  try {
+    // --- Configurações de Quantidade ---
+    const NUM_SESSIONS_TO_SIMULATE = 5;
+    const NUM_CARTS_TO_CREATE = 8;
+    const NUM_PRODUCTS_TO_CACHE = 10;
+    const NUM_PRODUCTS_IN_RANKING = 15;
+    const NUM_PRODUCTS_WITH_VIEWS = 15;
+
+    // 1. Limpar o banco de dados atual para garantir idempotência
+    await redis.flushdb();
+    console.log('   -> 🧹 Banco de dados Redis limpo.');
+
+    // Cenário 1: Simular login de usuário (SET com expiração)
+    console.log(`   -> 👤 Simulando ${NUM_SESSIONS_TO_SIMULATE} sessões de usuário...`);
+    for (let i = 0; i < NUM_SESSIONS_TO_SIMULATE; i++) {
+      const clientId = clientIds[i % clientIds.length];
+      const sessionKey = `session:${clientId}`;
+      const sessionData = JSON.stringify({
+        userId: clientId,
+        loggedInAt: new Date().toISOString(),
+      });
+      await redis.set(sessionKey, sessionData, 'EX', 3600); // Expira em 1 hora
+    }
+
+    // Cenário 2: Gerenciar um carrinho de compras (HASH)
+    console.log(`   -> 🛒 Criando ${NUM_CARTS_TO_CREATE} carrinhos de compras...`);
+    for (let i = 0; i < NUM_CARTS_TO_CREATE; i++) {
+      const clientId = clientIds[i % clientIds.length];
+      const cartKey = `cart:${clientId}`;
+      const numItemsInCart = Math.floor(Math.random() * 4) + 1; // 1 a 4 itens
+      const cartItems: { [key: string]: string } = {};
+      for (let j = 0; j < numItemsInCart; j++) {
+        const product = products[Math.floor(Math.random() * products.length)];
+        cartItems[product._id.toHexString()] = (Math.floor(Math.random() * 3) + 1).toString();
+      }
+      await redis.hset(cartKey, cartItems);
+    }
+
+    // Cenário 3: Implementar cache de produtos
+    console.log(`   -> 📦 Colocando ${NUM_PRODUCTS_TO_CACHE} produtos em cache...`);
+    for (let i = 0; i < NUM_PRODUCTS_TO_CACHE; i++) {
+      const productToCache = products[i % products.length];
+      const productCacheKey = `product:${productToCache._id.toHexString()}`;
+      await redis.set(productCacheKey, JSON.stringify(productToCache), 'EX', 300); // Cache expira em 5 minutos
+    }
+
+    // Cenário 4: Manter um ranking de produtos mais vistos (Sorted Set)
+    const rankingKey = 'products:ranking:views';
+    const productsForRanking = products.slice(0, NUM_PRODUCTS_IN_RANKING);
+    const rankingPromises = productsForRanking.map((p) => {
+      const randomViews = Math.floor(Math.random() * 1000) + 50; // Vistas entre 50 e 1050
+      return redis.zadd(rankingKey, randomViews, p._id.toHexString());
+    });
+    await Promise.all(rankingPromises);
+    console.log(
+      `   -> 🏆 Ranking de produtos mais vistos criado com ${NUM_PRODUCTS_IN_RANKING} produtos.`,
+    );
+
+    // Cenário 5: Contar visualizações de página de um produto (INCR)
+    console.log(
+      `   -> 👁️  Incrementando visualizações para ${NUM_PRODUCTS_WITH_VIEWS} produtos...`,
+    );
+    for (let i = 0; i < NUM_PRODUCTS_WITH_VIEWS; i++) {
+      const productForViews = products[i % products.length];
+      const viewsKey = `product:views:${productForViews._id.toHexString()}`;
+      await redis.incrby(viewsKey, Math.floor(Math.random() * 50) + 1); // Incrementa um valor aleatório
+    }
+
+    console.log('✅ [Redis] Seed concluído com sucesso.');
+  } catch (error) {
+    console.error('\n❌ Erro durante o seed do Redis.', error);
+    throw error;
+  }
+}
+
 async function main() {
   console.log('🚀 Iniciando processo de seeding orquestrado...');
   const mongoClient = new MongoClient(databaseConfig.mongodb.uri);
   const pgPool = new Pool(databaseConfig.postgres);
+  const redisClient = new Redis(databaseConfig.redis);
 
   try {
     // Conectar a todos os bancos
@@ -512,19 +605,24 @@ async function main() {
     console.log('🔗 Conectado ao MongoDB.');
     await pgPool.query('SELECT NOW()');
     console.log('🔗 Conectado ao PostgreSQL.');
+    await redisClient.ping();
+    console.log('🔗 Conectado ao Redis.');
 
     // Executar o seeding em sequência
     await cleanAllTables(pgPool);
     const pgSeedData = await seedPostgresBase(pgPool);
     const createdProducts = await seedMongo(mongoClient, pgSeedData);
+    await seedUserPreferences(mongoClient, pgSeedData);
     await seedPostgresOrders(pgPool, createdProducts);
     await seedNeo4j(pgPool, createdProducts);
+    await seedRedis(redisClient, pgSeedData.clientIds, createdProducts);
 
     console.log('\n🎉 Seeding orquestrado concluído com sucesso!');
   } finally {
     // Fechar todas as conexões
     await mongoClient.close();
     await pgPool.end();
+    redisClient.disconnect();
     console.log('🔌 Conexões com os bancos de dados fechadas.');
   }
 }

@@ -101,7 +101,7 @@ db.runCommand({
           description: 'Array de avaliações do produto',
           items: {
             bsonType: 'object',
-            required: ['id_cliente', 'nota'],
+            required: ['id_cliente', 'nota', 'data_avaliacao'],
             properties: {
               id_cliente: {
                 bsonType: 'int',
@@ -117,6 +117,10 @@ db.runCommand({
                 bsonType: 'string',
                 maxLength: 500,
                 description: 'Comentário opcional da avaliação',
+              },
+              data_avaliacao: {
+                bsonType: 'date',
+                description: 'Data em que a avaliação foi feita.',
               },
             },
           },
@@ -139,47 +143,46 @@ db.runCommand({
 print('✅ Collection products configurada com indexes e validação');
 
 // ===============================================================================
-// Collection: perfis_usuario (para o futuro)
+// Collection: user_preferences
 // ===============================================================================
-print('👤 Configurando collection perfis_usuario...');
+print('👤 Configurando collection user_preferences...');
 
-// Indexes para perfis de usuário
-db.perfis_usuario.createIndex({ id_cliente: 1 }, { unique: true, name: 'idx_perfis_id_cliente' });
-db.perfis_usuario.createIndex(
-  { 'preferencias.categorias_favoritas': 1 },
-  { name: 'idx_perfis_categorias_favoritas' },
+// Indexes para preferências de usuário
+db.user_preferences.createIndex(
+  { id_cliente: 1 },
+  { unique: true, name: 'idx_preferences_id_cliente' },
 );
-db.perfis_usuario.createIndex(
-  { historico_navegacao_recente: -1 },
-  { name: 'idx_perfis_historico_recente' },
-);
+db.user_preferences.createIndex({ preferencias: 1 }, { name: 'idx_preferences_categorias' });
 
-// Validação de schema para perfis_usuario
+// Validação de schema para user_preferences
 db.runCommand({
-  collMod: 'perfis_usuario',
+  collMod: 'user_preferences',
   validator: {
     $jsonSchema: {
       bsonType: 'object',
-      required: ['id_cliente'],
+      required: ['id_cliente', 'preferencias'],
       properties: {
         id_cliente: {
           bsonType: 'int',
-          description: 'ID do cliente é obrigatório',
+          description: 'ID do cliente (do PostgreSQL) é obrigatório e único.',
         },
         preferencias: {
-          bsonType: 'object',
-          description: 'Documento com preferências do usuário',
-        },
-        dados_demograficos_complementares: {
-          bsonType: 'object',
-          description: 'Dados demográficos adicionais',
-        },
-        historico_navegacao_recente: {
           bsonType: 'array',
+          minItems: 1,
+          description: 'Array de IDs de categoria (do PostgreSQL) que o usuário prefere.',
           items: {
-            bsonType: 'objectId',
+            bsonType: 'int',
+            minimum: 1,
+            description: 'ID da categoria deve ser um inteiro positivo.',
           },
-          description: 'Array de ObjectIds dos produtos visualizados recentemente',
+        },
+        created_at: {
+          bsonType: 'date',
+          description: 'Data de criação do registro de preferência.',
+        },
+        updated_at: {
+          bsonType: 'date',
+          description: 'Data da última atualização do registro de preferência.',
         },
       },
     },
@@ -188,7 +191,7 @@ db.runCommand({
   validationAction: 'warn',
 });
 
-print('✅ Collection perfis_usuario configurada');
+print('✅ Collection user_preferences configurada');
 
 // ===============================================================================
 // FINALIZANDO CONFIGURAÇÃO
@@ -197,7 +200,7 @@ print('✅ Collection perfis_usuario configurada');
 // Exibir estatísticas finais
 print('\n📊 ESTATÍSTICAS DO BANCO:');
 print(`Products collection - Indexes: ${db.products.getIndexes().length}`);
-print(`Perfis_usuario collection - Indexes: ${db.perfis_usuario.getIndexes().length}`);
+print(`User_preferences collection - Indexes: ${db.user_preferences.getIndexes().length}`);
 
 print('\n🎉 Inicialização do MongoDB concluída com sucesso!');
 print('\n📋 INFORMAÇÕES DE CONEXÃO:');
