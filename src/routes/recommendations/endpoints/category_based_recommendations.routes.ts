@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { ProductRecommendationRepository } from '@/repositories/neo4j/recommendations/ProductRecommendationRepository';
+import { RecommendationRepository } from '@/repositories/recommendation/RecommendationRepository';
 
 interface CategoryBasedRecommendationParams {
   clienteId: string;
@@ -48,10 +48,10 @@ async function categoryBasedRecommendationsHandler(
     }
 
     // Instancia o repository
-    const recommendationRepository = new ProductRecommendationRepository(this.neo4j);
+    const recommendationRepository = new RecommendationRepository(this);
 
     // Executa a recomendação baseada em categorias visualizadas
-    const recomendacoes = await recommendationRepository.findCategoryBasedRecommendations(
+    const recomendacoes = await recommendationRepository.getCategoryBasedRecommendations(
       clienteId,
       limite,
       diasAnalise,

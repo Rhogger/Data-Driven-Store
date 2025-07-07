@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ProductRepository } from '@repositories/mongodb/ProductRepository';
+import { ProductRepository } from '@repositories/product/ProductRepository';
 import { productSchemas } from '../schema/product.schemas';
 
 interface LowStockQuery {
@@ -13,7 +13,7 @@ const lowStockProductsRoutes: FastifyPluginAsync = async (fastify) => {
     schema: productSchemas.lowStock(),
     handler: async (request, reply) => {
       const limiar = Number(request.query.limiar) || 10;
-      const repo = new ProductRepository(fastify);
+      const repo = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
       const products = await repo.findLowStock(limiar);
       return reply.send(products);
     },

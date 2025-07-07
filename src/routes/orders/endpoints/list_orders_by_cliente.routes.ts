@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { OrderRepository } from '@repositories/postgres/orders/OrderRepository';
+import { OrderRepository } from '@repositories/order/OrderRepository';
 import { orderSchemas } from '../schema/order.schemas';
 
 const listOrdersByClienteRoutes: FastifyPluginAsync = async (fastify) => {
@@ -9,7 +9,7 @@ const listOrdersByClienteRoutes: FastifyPluginAsync = async (fastify) => {
     schema: orderSchemas.listByCliente(),
     handler: async (request, reply) => {
       const id_cliente = Number(request.params.id_cliente);
-      const orderRepository = new OrderRepository(fastify.pg);
+      const orderRepository = new OrderRepository(fastify);
       const orders = await orderRepository.findByClienteId(id_cliente);
       return reply.send(orders);
     },

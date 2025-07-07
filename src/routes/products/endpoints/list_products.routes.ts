@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ProductRepository } from '@repositories/mongodb/ProductRepository';
+import { ProductRepository } from '@repositories/product/ProductRepository';
 import { productSchemas } from '@routes/products/schema/product.schemas';
 
 interface ListProductsQuery {
@@ -33,7 +33,7 @@ const listProductsRoutes: FastifyPluginAsync = async (fastify) => {
         }
 
         const skip = (page - 1) * pageSize;
-        const productRepository = new ProductRepository(fastify);
+        const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
         const products = await productRepository.findAll(pageSize + 1, skip);
 
         // Verificar se há mais páginas

@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ProductRepository } from '@repositories/mongodb/ProductRepository';
+import { ProductRepository } from '@repositories/product/ProductRepository';
 import { productSchemas } from '@routes/products/schema/product.schemas';
 
 const getProductByIdRoutes: FastifyPluginAsync = async (fastify) => {
@@ -9,7 +9,7 @@ const getProductByIdRoutes: FastifyPluginAsync = async (fastify) => {
     schema: productSchemas.getById(),
     handler: async (request, reply) => {
       try {
-        const productRepository = new ProductRepository(fastify);
+        const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
         const product = await productRepository.findById(request.params.id);
 
         if (!product) {

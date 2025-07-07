@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { ConversionFunnelRepository } from '@repositories/cassandra/conversion-funnel/ConversionFunnelRepository';
+import { ConversionFunnelRepository } from '@/repositories/conversion-funnel/ConversionFunnelRepository';
 
 export const getConversionFunnelStatsHandler = async (
   request: FastifyRequest,

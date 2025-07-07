@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { CategoryRepository } from '@repositories/postgres/CategoryRepository';
+import { CategoryRepository } from '@repositories/category/CategoryRepository';
 import { categorySchemas } from '@routes/categories/schema/category.schemas';
 
 interface CreateCategoryBody {
@@ -23,7 +23,7 @@ async function createCategoryHandler(
 
   try {
     const categoryRepository = new CategoryRepository(this);
-    const newCategory = await categoryRepository.create(nome.trim());
+    const newCategory = await categoryRepository.create({ nome: nome.trim() });
 
     reply.code(201).send({
       success: true,

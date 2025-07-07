@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { ClientRecommendationRepository } from '@/repositories/neo4j/recommendations/ClientRecommendationRepository';
+import { RecommendationRepository } from '@/repositories/recommendation/RecommendationRepository';
 
 interface InfluencerCustomersQuery {
   limite?: number;
@@ -43,14 +43,10 @@ async function influencerCustomersHandler(
     }
 
     // Instancia o repository
-    const recommendationRepository = new ClientRecommendationRepository(this.neo4j);
+    const recommendationRepository = new RecommendationRepository(this);
 
     // Busca clientes influenciadores
-    const influenciadores = await recommendationRepository.findInfluencerCustomers(
-      limite,
-      minAvaliacoes,
-      periodoAnalise,
-    );
+    const influenciadores = await recommendationRepository.getInfluencerCustomers(limite);
 
     // Verifica se encontrou influenciadores
     if (influenciadores.length === 0) {

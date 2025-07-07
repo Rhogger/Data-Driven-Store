@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { CategoryRepository } from '@repositories/postgres/CategoryRepository';
+import { CategoryRepository } from '@repositories/category/CategoryRepository';
 import { categorySchemas } from '@routes/categories/schema/category.schemas';
 
 async function listCategoriesHandler(
