@@ -6,6 +6,7 @@ import topCustomersReportRoutes from '@routes/reports/top-customers-report.route
 import orderRoutes from '@routes/orders/order.routes';
 import databaseTestRoutes from '@routes/database-tests/database-tests.routes';
 import recommendationRoutes from '@routes/recommendations/recommendation.routes';
+import analyticsRoutes from '@routes/analytics/analytics.routes';
 
 export default async function apiRoutes(fastify: FastifyInstance) {
   fastify.register(healthCheckRoutes);
@@ -15,4 +16,5 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   fastify.register(orderRoutes);
   fastify.register(databaseTestRoutes);
   fastify.register(recommendationRoutes);
+  fastify.register(analyticsRoutes);
 }
