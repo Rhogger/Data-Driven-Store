@@ -1,11 +1,28 @@
 #!/bin/bash
 
+# --- Verificar parâmetro de modo ---
+MODE=${1:-production}
+
+if [ "$MODE" = "dev" ] || [ "$MODE" = "development" ]; then
+    echo "🔥 MODO DESENVOLVIMENTO SELECIONADO (HOT RELOAD)"
+    export DEV_MODE=true
+    export BUILD_MODE=development
+    MODE_NAME="DESENVOLVIMENTO"
+    MODE_EMOJI="🔥"
+else
+    echo "🏗️ MODO PRODUÇÃO SELECIONADO (BUILD)"
+    export DEV_MODE=false
+    export BUILD_MODE=production
+    MODE_NAME="PRODUÇÃO"
+    MODE_EMOJI="🏗️"
+fi
+
 # --- Configurações ---
 API_SERVICE_NAME="dds_api"
 # Lista de serviços de banco de dados
-DB_SERVICES="postgres mongo redis neo4j cassandra" # Incluído cassandra na lista
+DB_SERVICES="postgres mongo redis neo4j cassandra"
 
-echo "--- Iniciando ambiente de desenvolvimento Docker ---"
+echo "--- Iniciando ambiente Docker em modo $MODE_NAME $MODE_EMOJI ---"
 
 # 0. Corrigir permissões dos diretórios de banco de dados
 echo "0. Corrigindo permissões dos diretórios de banco de dados..."
@@ -29,17 +46,21 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# 2. Reconstruir e subir o serviço da API
-echo "2. Reconstruindo a imagem da API sem usar cache..."
-# --force-rm: remove contêineres intermediários após o build (economiza espaço)
-docker compose build --no-cache --force-rm "$API_SERVICE_NAME"
+# 3. Reconstruir e subir o serviço da API
+if [ "$DEV_MODE" = "true" ]; then
+    echo "3. Reconstruindo a imagem da API para DESENVOLVIMENTO..."
+    docker compose build --no-cache --force-rm "$API_SERVICE_NAME"
+else
+    echo "3. Reconstruindo a imagem da API para PRODUÇÃO..."
+    docker compose build --no-cache --force-rm "$API_SERVICE_NAME"
+fi
 
 if [ $? -ne 0 ]; then
     echo "ERRO: Falha ao reconstruir a imagem da API ($API_SERVICE_NAME). Verifique os logs do build."
     exit 1
 fi
 
-echo "3. Subindo o serviço da API com a nova imagem..."
+echo "4. Subindo o serviço da API em modo $MODE_NAME..."
 docker compose up -d "$API_SERVICE_NAME"
 
 if [ $? -ne 0 ]; then
@@ -47,7 +68,20 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "--- Ambiente de desenvolvimento iniciado. Verificando logs da API... ---"
+if [ "$DEV_MODE" = "true" ]; then
+    echo "--- Ambiente de desenvolvimento com HOT RELOAD iniciado! $MODE_EMOJI ---"
+    echo "✅ Agora você pode editar arquivos em src/ e as mudanças serão refletidas automaticamente no container!"
+    echo "📝 Para ver os logs da API em tempo real, execute: docker compose logs -f dds_api"
+    echo "🛑 Para parar o ambiente: docker compose down"
+else
+    echo "--- Ambiente de produção iniciado! $MODE_EMOJI ---"
+    echo "✅ Aplicação rodando em modo produção (build compilado)"
+    echo "📝 Para ver os logs da API em tempo real, execute: docker compose logs -f dds_api"
+    echo "🛑 Para parar o ambiente: docker compose down"
+fi
+
+echo ""
+echo "--- Verificando logs da API... ---"
 echo "Para parar os logs, pressione Ctrl+C"
 docker compose logs -f "$API_SERVICE_NAME"
 

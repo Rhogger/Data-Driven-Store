@@ -21,9 +21,10 @@
       }
     },
     {
-      "label": "🚀 Start Docker Environment",
+      "label": "🚀 Start Docker Environment (Production)",
       "type": "shell",
       "command": "./start.sh",
+      "args": ["production"],
       "group": "test",
       "isBackground": true,
       "presentation": {
@@ -43,8 +44,47 @@
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "--- Iniciando ambiente de desenvolvimento Docker ---",
+          "beginsPattern": "--- Iniciando ambiente Docker em modo PRODUÇÃO",
           "endsPattern": "Server listening at"
+        }
+      },
+      "options": {
+        "statusbar": {
+          "label": "Start Production"
+        }
+      }
+    },
+    {
+      "label": "🔥 Start Docker Environment (Development - Hot Reload)",
+      "type": "shell",
+      "command": "./start.sh",
+      "args": ["dev"],
+      "group": "test",
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": true
+      },
+      "problemMatcher": {
+        "owner": "docker",
+        "pattern": {
+          "regexp": "^(ERRO|ERROR):\\s*(.*)$",
+          "severity": 1,
+          "message": 2
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "--- Iniciando ambiente Docker em modo DESENVOLVIMENTO",
+          "endsPattern": "Server listening at"
+        }
+      },
+      "options": {
+        "statusbar": {
+          "label": "Start Dev Mode"
         }
       }
     },
@@ -82,6 +122,59 @@
         "panel": "shared",
         "showReuseMessage": true,
         "clear": false
+      }
+    },
+    {
+      "label": "🔥 Start Development Environment (Hot Reload)",
+      "type": "shell",
+      "command": "./start-dev.sh",
+      "group": "test",
+      "isBackground": true,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": true
+      },
+      "problemMatcher": {
+        "owner": "docker",
+        "pattern": {
+          "regexp": "^(ERRO|ERROR):\\s*(.*)$",
+          "severity": 1,
+          "message": 2
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "--- Iniciando ambiente de desenvolvimento Docker com HOT RELOAD ---",
+          "endsPattern": "Server listening at"
+        }
+      },
+      "options": {
+        "statusbar": {
+          "label": "Start Dev Mode"
+        }
+      }
+    },
+    {
+      "label": "🛑 Stop Development Environment",
+      "type": "shell",
+      "command": "./stop-dev.sh",
+      "group": "test",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "statusbar": {
+          "label": "Stop Dev Mode"
+        }
       }
     }
   ]

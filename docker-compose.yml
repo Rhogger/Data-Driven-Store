@@ -115,7 +115,10 @@ services:
       start_period: 60s
 
   dds_api:
-    build: .
+    build:
+      context: .
+      args:
+        MODE: ${BUILD_MODE:-production}
     container_name: datadriven_api
     ports:
       - '${APP_PORT:-3000}:${APP_PORT:-3000}'
@@ -124,6 +127,7 @@ services:
     environment:
       PORT: ${APP_PORT:-3000}
       NODE_ENV: ${NODE_ENV:-development}
+      DEV_MODE: ${DEV_MODE:-false}
 
       PG_USER: ${POSTGRES_USER}
       PG_PASSWORD: ${POSTGRES_PASSWORD}
@@ -162,6 +166,7 @@ services:
     networks:
       - datastore-network
     volumes:
+      # Sempre monta o código para hot reload
       - .:/app
       - /app/node_modules
     command: ['/bin/sh', './run.sh']
