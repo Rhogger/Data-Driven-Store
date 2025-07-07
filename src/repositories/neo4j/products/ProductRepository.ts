@@ -248,7 +248,7 @@ export class ProdutoRepository {
         };
       }
 
-      const relationshipsDeleted = deleteResult.records[0].get('rel_count').toNumber();
+      const relationshipsDeleted = deleteResult.records[0].get('rel_count');
 
       // Agora tentar deletar categorias órfãs
       const categoriasDeletedMessages: string[] = [];

@@ -1,4 +1,4 @@
-import { Driver, Session } from 'neo4j-driver';
+import neo4j, { Driver, Session } from 'neo4j-driver';
 import {
   RecommendedProduct,
   ProductPath,
@@ -53,7 +53,7 @@ export class ProductRecommendationRepository {
 
       const result = await session.run(query, {
         produtoId,
-        limite,
+        limite: neo4j.int(limite),
       });
 
       return result.records.map((record) => ({
@@ -61,8 +61,8 @@ export class ProductRecommendationRepository {
         nome: record.get('nome'),
         marca: record.get('marca'),
         categoria: record.get('categoria'),
-        score: record.get('score').toNumber(),
-        clientes_em_comum: record.get('clientes_em_comum').toNumber(),
+        score: record.get('score'),
+        clientes_em_comum: record.get('clientes_em_comum'),
       }));
     } finally {
       await session.close();
@@ -137,7 +137,7 @@ export class ProductRecommendationRepository {
       const result = await session.run(query, {
         produtoOrigemId,
         produtoDestinoId,
-        maxDistancia,
+        maxDistancia: neo4j.int(maxDistancia),
       });
 
       if (result.records.length === 0) {
@@ -168,7 +168,7 @@ export class ProductRecommendationRepository {
           nome: record.get('produto_destino_nome'),
         },
         caminho_encontrado: record.get('caminho_encontrado'),
-        distancia: record.get('distancia').toNumber(),
+        distancia: record.get('distancia'),
         algoritmo_usado: record.get('algoritmo_usado'),
         caminho: record.get('caminho'),
       };
@@ -243,8 +243,8 @@ export class ProductRecommendationRepository {
 
       const result = await session.run(query, {
         clienteId,
-        limite,
-        diasAnalise,
+        limite: neo4j.int(limite),
+        diasAnalise: neo4j.int(diasAnalise),
       });
 
       return result.records.map((record) => ({

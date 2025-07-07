@@ -2,6 +2,7 @@
 /* eslint-disable no-console */
 import { MongoClient, ObjectId } from 'mongodb';
 import { Pool, PoolClient } from 'pg';
+import neo4j from 'neo4j-driver';
 import { databaseConfig } from '../../src/config/database';
 
 // Tipos para clareza
@@ -10,11 +11,12 @@ type Product = {
   nome: string;
   descricao: string;
   preco: number;
+  marca: string;
   categorias: number[];
   estoque: number;
   reservado: number;
   disponivel: number;
-  tags: string[];
+  avaliacoes: { id_cliente: number; nota: number; comentario?: string }[];
   created_at: Date;
   updated_at: Date;
 };
@@ -41,7 +43,9 @@ async function cleanAllTables(pgPool: Pool) {
   console.log('✅ [PG] Todas as tabelas foram limpas.');
 }
 
-async function seedPostgresBase(pgPool: Pool): Promise<number[]> {
+async function seedPostgresBase(
+  pgPool: Pool,
+): Promise<{ categoryIds: number[]; clientIds: number[] }> {
   console.log('🌱 [PG] Iniciando seed base (Estados, Cidades, Categorias, Clientes)...');
   const client = await pgPool.connect();
 
@@ -158,6 +162,7 @@ async function seedPostgresBase(pgPool: Pool): Promise<number[]> {
     const { rows: cidades } = await client.query('SELECT id_cidade FROM cidades');
     const cidadeIds = cidades.map((c) => c.id_cidade);
 
+    const clientIds: number[] = [];
     for (let i = 1; i <= TOTAL_CLIENTS; i++) {
       const clienteResult = await client.query(
         'INSERT INTO clientes (nome, email, cpf, telefone) VALUES ($1, $2, $3, $4) RETURNING id_cliente',
@@ -169,6 +174,7 @@ async function seedPostgresBase(pgPool: Pool): Promise<number[]> {
         ],
       );
       const clienteId = clienteResult.rows[0].id_cliente;
+      clientIds.push(clienteId);
 
       await client.query(
         'INSERT INTO enderecos (id_cliente, id_cidade, logradouro, numero, cep, tipo_endereco, bairro) VALUES ($1, $2, $3, $4, $5, $6, $7)',
@@ -186,7 +192,7 @@ async function seedPostgresBase(pgPool: Pool): Promise<number[]> {
     console.log(`   -> ${TOTAL_CLIENTS} Clientes e Endereços inseridos.`);
 
     await client.query('COMMIT');
-    return categoryIds;
+    return { categoryIds, clientIds };
   } catch (e) {
     await client.query('ROLLBACK');
     throw e;
@@ -202,7 +208,41 @@ function getRandomCategories(allCategoryIds: number[], count: number): number[] 
   return shuffled.slice(0, count);
 }
 
-async function seedMongo(mongoClient: MongoClient, categoryIds: number[]): Promise<Product[]> {
+// Função auxiliar para gerar avaliações aleatórias
+function generateRandomReviews(
+  clientIds: number[],
+): { id_cliente: number; nota: number; comentario: string }[] {
+  const reviews = [];
+  const numReviews = Math.floor(Math.random() * 6); // 0 a 5 reviews
+  if (numReviews === 0 || clientIds.length === 0) {
+    return [];
+  }
+
+  const shuffledClientIds = [...clientIds].sort(() => 0.5 - Math.random());
+  const clientsForReviews = shuffledClientIds.slice(0, numReviews);
+
+  for (const clientId of clientsForReviews) {
+    const comentarios = [
+      'Produto excelente, superou minhas expectativas!',
+      'Bom custo-benefício, recomendo.',
+      'A entrega foi muito rápida.',
+      'Poderia ser melhor, mas cumpre o que promete.',
+      'Não gostei muito, a qualidade deixou a desejar.',
+      'Ótimo produto!',
+    ];
+    reviews.push({
+      id_cliente: clientId,
+      nota: Math.floor(Math.random() * 5) + 1, // Nota de 1 a 5
+      comentario: comentarios[Math.floor(Math.random() * comentarios.length)],
+    });
+  }
+  return reviews;
+}
+
+async function seedMongo(
+  mongoClient: MongoClient,
+  { categoryIds, clientIds }: { categoryIds: number[]; clientIds: number[] },
+): Promise<Product[]> {
   console.log('🌱 [Mongo] Iniciando seed de produtos...');
   const db = mongoClient.db(databaseConfig.mongodb.database);
   const productCollection = db.collection('products');
@@ -226,7 +266,7 @@ async function seedMongo(mongoClient: MongoClient, categoryIds: number[]): Promi
   const marcas = ['TechPro', 'GlobalData', 'OfficeComfort', 'GamerX', 'Bookworm', 'StyleFit'];
 
   for (let i = 0; i < TOTAL_PRODUCTS; i++) {
-    const estoque = Math.floor(Math.random() * 200);
+    const estoque = Math.floor(Math.random() * 150) + 50; // Estoque entre 50 e 200
     productsToInsert.push({
       nome: `${productNames[i % productNames.length]} v${Math.floor(i / productNames.length) + 1}`,
       descricao: `Descrição detalhada do produto ${i + 1}. Marca ${marcas[i % marcas.length]}. Este item possui características únicas e é feito com materiais de alta qualidade.`,
@@ -234,7 +274,8 @@ async function seedMongo(mongoClient: MongoClient, categoryIds: number[]): Promi
       categorias: getRandomCategories(categoryIds, Math.floor(Math.random() * 3) + 1), // Pega de 1 a 3 categorias
       estoque: estoque,
       reservado: 0, // Começa com 0
-      tags: ['novo', 'popular', 'oferta'].slice(0, Math.floor(Math.random() * 3) + 1),
+      marca: marcas[i % marcas.length],
+      avaliacoes: generateRandomReviews(clientIds),
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -346,25 +387,142 @@ async function seedPostgresOrders(pgPool: Pool, products: Product[]) {
   console.log(`\n✅ [PG] ${TOTAL_ORDERS} pedidos inseridos com sucesso.`);
 }
 
+async function seedNeo4j(pgPool: Pool, products: Product[]) {
+  console.log('🌱 [Neo4j] Iniciando seed do grafo...');
+  const driver = neo4j.driver(
+    databaseConfig.neo4j.uri,
+    neo4j.auth.basic(databaseConfig.neo4j.user, databaseConfig.neo4j.password),
+  );
+  const session = driver.session({ database: 'neo4j' });
+
+  try {
+    // 1. Limpar o banco de dados para garantir idempotência
+    console.log('   -> 🧹 Limpando dados existentes...');
+    await session.run('MATCH (n) DETACH DELETE n');
+
+    // 2. Buscar dados de base do PostgreSQL
+    const { rows: clients } = await pgPool.query('SELECT id_cliente, nome FROM clientes');
+    const { rows: categories } = await pgPool.query(
+      'SELECT id_categoria, nome, id_categoria_pai FROM categorias',
+    );
+    const { rows: orderItems } = await pgPool.query(`
+      SELECT p.id_cliente, ip.id_produto, p.data_pedido, ip.quantidade
+      FROM itens_pedido ip
+      JOIN pedidos p ON ip.id_pedido = p.id_pedido
+    `);
+
+    // 3. Criar nós
+    console.log('   -> 🧠 Criando nós (Marcas, Categorias, Clientes, Produtos)...');
+
+    // Prepara os dados com os tipos corretos para o Neo4j
+    const clientsForNeo4j = clients.map((cli) => ({
+      ...cli,
+      id_cliente: neo4j.int(cli.id_cliente),
+    }));
+    const categoriesForNeo4j = categories.map((cat) => ({
+      ...cat,
+      id_categoria: neo4j.int(cat.id_categoria),
+      id_categoria_pai: cat.id_categoria_pai ? neo4j.int(cat.id_categoria_pai) : null,
+    }));
+
+    const marcas = [...new Set(products.map((p) => p.marca))];
+    await session.run('UNWIND $marcas as marca_nome CREATE (:Marca {nome: marca_nome})', {
+      marcas,
+    });
+
+    await session.run(
+      'UNWIND $categories as cat CREATE (c:Categoria {id_categoria: cat.id_categoria, nome: cat.nome})',
+      { categories: categoriesForNeo4j },
+    );
+
+    await session.run(
+      'UNWIND $clients as cli CREATE (c:Cliente {id_cliente: cli.id_cliente, nome: cli.nome})',
+      { clients: clientsForNeo4j },
+    );
+
+    const productsForNeo4j = products.map((p) => ({
+      id_produto: p._id.toHexString(),
+      nome: p.nome,
+      preco: p.preco,
+    }));
+    await session.run(
+      'UNWIND $products as prod CREATE (p:Produto {id_produto: prod.id_produto, nome: prod.nome, preco: prod.preco})',
+      { products: productsForNeo4j },
+    );
+
+    // 4. Criar relacionamentos
+    console.log('   -> 🔗 Criando relacionamentos...');
+    // Categorias -> Subcategorias
+    await session.run(
+      `UNWIND $categories as cat
+       MATCH (pai:Categoria {id_categoria: cat.id_categoria_pai}), (filha:Categoria {id_categoria: cat.id_categoria})
+       WHERE cat.id_categoria_pai IS NOT NULL
+       MERGE (pai)-[:PAI_DE]->(filha)`,
+      { categories: categoriesForNeo4j },
+    );
+
+    // Produtos -> Categorias e Marcas
+    const productRelations = products.map((p) => ({
+      id_produto: p._id.toHexString(),
+      marca: p.marca,
+      categorias: p.categorias.map((catId) => neo4j.int(catId)),
+    }));
+    await session.run(
+      `UNWIND $relations as rel
+       MATCH (p:Produto {id_produto: rel.id_produto})
+       MATCH (m:Marca {nome: rel.marca})
+       MERGE (p)-[:PRODUZIDO_POR]->(m)
+       WITH p, rel
+       UNWIND rel.categorias as cat_id
+       MATCH (c:Categoria {id_categoria: cat_id})
+       MERGE (p)-[:PERTENCE_A]->(c)`,
+      { relations: productRelations },
+    );
+
+    // Clientes -> Produtos (COMPROU)
+    const purchaseRelations = orderItems.map((item) => ({
+      id_cliente: neo4j.int(item.id_cliente),
+      id_produto: item.id_produto,
+      data_pedido: item.data_pedido.toISOString(),
+      quantidade: neo4j.int(item.quantidade),
+    }));
+    await session.run(
+      `UNWIND $purchases as purchase
+       MATCH (cli:Cliente {id_cliente: purchase.id_cliente})
+       MATCH (p:Produto {id_produto: purchase.id_produto})
+       CREATE (cli)-[:COMPROU {data: datetime(purchase.data_pedido), quantidade: purchase.quantidade}]->(p)`,
+      { purchases: purchaseRelations },
+    );
+
+    console.log('✅ [Neo4j] Seed do grafo concluído com sucesso.');
+  } finally {
+    await session.close();
+    await driver.close();
+  }
+}
+
 async function main() {
   console.log('🚀 Iniciando processo de seeding orquestrado...');
   const mongoClient = new MongoClient(databaseConfig.mongodb.uri);
   const pgPool = new Pool(databaseConfig.postgres);
 
   try {
+    // Conectar a todos os bancos
     await mongoClient.connect();
     console.log('🔗 Conectado ao MongoDB.');
-
     await pgPool.query('SELECT NOW()');
     console.log('🔗 Conectado ao PostgreSQL.');
 
+    // Executar o seeding em sequência
     await cleanAllTables(pgPool);
-    const pgCategoryIds = await seedPostgresBase(pgPool);
-    const createdProducts = await seedMongo(mongoClient, pgCategoryIds);
+    const pgSeedData = await seedPostgresBase(pgPool);
+    const createdProducts = await seedMongo(mongoClient, pgSeedData);
     await seedPostgresOrders(pgPool, createdProducts);
+    await seedNeo4j(pgPool, createdProducts);
 
     console.log('\n🎉 Seeding orquestrado concluído com sucesso!');
   } finally {
+    // Fechar todas as conexões
     await mongoClient.close();
     await pgPool.end();
     console.log('🔌 Conexões com os bancos de dados fechadas.');

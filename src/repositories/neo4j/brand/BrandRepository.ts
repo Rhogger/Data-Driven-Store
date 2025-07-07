@@ -129,7 +129,7 @@ export class MarcaRepository {
         };
       }
 
-      const productCount = checkResult.records[0].get('product_count').toNumber();
+      const productCount = checkResult.records[0].get('product_count');
 
       if (productCount > 0) {
         return {
@@ -147,7 +147,7 @@ export class MarcaRepository {
       `;
 
       const deleteResult = await session.run(deleteQuery, { id_marca });
-      const deletedCount = deleteResult.records[0].get('deleted_count').toNumber();
+      const deletedCount = deleteResult.records[0].get('deleted_count');
 
       if (deletedCount > 0) {
         return {

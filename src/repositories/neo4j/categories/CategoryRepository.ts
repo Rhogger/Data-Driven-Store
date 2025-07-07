@@ -81,7 +81,7 @@ export class CategoriaRepository {
         };
       }
 
-      const productCount = checkResult.records[0].get('product_count').toNumber();
+      const productCount = checkResult.records[0].get('product_count');
 
       if (productCount > 0) {
         return {
@@ -99,7 +99,7 @@ export class CategoriaRepository {
       `;
 
       const deleteResult = await session.run(deleteQuery, { id_categoria });
-      const deletedCount = deleteResult.records[0].get('deleted_count').toNumber();
+      const deletedCount = deleteResult.records[0].get('deleted_count');
 
       if (deletedCount > 0) {
         return {

@@ -1,4 +1,4 @@
-import { Driver, Session } from 'neo4j-driver';
+import neo4j, { Driver, Session } from 'neo4j-driver';
 import {
   UserBasedRecommendation,
   InfluencerCustomer,
@@ -55,8 +55,8 @@ export class ClientRecommendationRepository {
         WHERE similaridade >= $minSimilaridade  // Filtro de similaridade mínima
 
         // Encontra produtos que outros clientes compraram mas o cliente base não
-        UNWIND produtos_outros_clientes as produto_recomendado
-        WHERE NOT produto_recomendado IN produtos_cliente_base
+        // Filtra a lista de produtos ANTES de expandi-la com UNWIND para evitar o erro de sintaxe
+        UNWIND [p IN produtos_outros_clientes WHERE NOT p IN produtos_cliente_base] as produto_recomendado
 
         // Busca informações detalhadas dos produtos recomendados
         MATCH (produto:Produto {id_produto: produto_recomendado})
@@ -88,7 +88,7 @@ export class ClientRecommendationRepository {
 
       const result = await session.run(query, {
         clienteId,
-        limite,
+        limite: neo4j.int(limite),
         minSimilaridade,
       });
 
@@ -209,15 +209,15 @@ export class ClientRecommendationRepository {
       `;
 
       const result = await session.run(query, {
-        limite,
-        minAvaliacoes,
-        periodoAnalise,
+        limite: neo4j.int(limite),
+        minAvaliacoes: neo4j.int(minAvaliacoes),
+        periodoAnalise: neo4j.int(periodoAnalise),
       });
 
       return result.records.map((record) => ({
         id_cliente: record.get('id_cliente'),
-        total_avaliacoes: record.get('total_avaliacoes').toNumber(),
-        avaliacoes_positivas: record.get('avaliacoes_positivas').toNumber(),
+        total_avaliacoes: record.get('total_avaliacoes'),
+        avaliacoes_positivas: record.get('avaliacoes_positivas'),
         taxa_avaliacoes_positivas: record.get('taxa_avaliacoes_positivas'),
         produtos_avaliados: record.get('produtos_avaliados'),
         impacto_vendas: record.get('impacto_vendas'),
