@@ -65,3 +65,14 @@ POSTGRES_PORT=5433
 ```
 
 ##### INSTALAR ASDF > PNPM > NODE
+
+## TODO:
+
+[] Criar endpoint de adicionar ao carrinho;
+[] Criar endpoint de remover do carrinho;
+[] Criar endpoint de limpar o carrinho;
+[] Criar endpoint de comprar um produto;
+[] Criar endpoint de avaliar um produto;
+[] Atualizar README;
+[] Tornar as categorias um array em Produtos;
+[] Ao editar um produto, deve verificar se alterou a marca, pois se alterar, deve alterar no Neo4J tmb
