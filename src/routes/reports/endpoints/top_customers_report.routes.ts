@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { TopCustomersReportRepository } from '@repositories/postgres/top-costumers/TopCustomersReportRepository';
+import { OrderRepository } from '@/repositories/order/OrderRepository';
 
 const topCustomersReportRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/reports/top-customers', {
@@ -28,8 +28,8 @@ const topCustomersReportRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     handler: async (request, reply) => {
-      const repo = new TopCustomersReportRepository(fastify.pg);
-      const data = await repo.generate();
+      const repo = new OrderRepository(fastify);
+      const data = await repo.getTopCustomers();
       return reply.send({ success: true, data });
     },
   });

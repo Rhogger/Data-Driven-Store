@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { ProductRecommendationRepository } from '@/repositories/neo4j/recommendations/ProductRecommendationRepository';
+import { RecommendationRepository } from '@/repositories/recommendation/RecommendationRepository';
 
 interface FrequentlyBoughtTogetherParams {
   produtoId: string;
@@ -39,10 +39,10 @@ async function frequentlyBoughtTogetherHandler(
     }
 
     // Instancia o repository
-    const recommendationRepository = new ProductRecommendationRepository(this.neo4j);
+    const recommendationRepository = new RecommendationRepository(this);
 
     // Executa a recomendação baseada no tipo de algoritmo
-    const recomendacoes = await recommendationRepository.findFrequentlyBoughtTogether(
+    const recomendacoes = await recommendationRepository.getFrequentlyBoughtTogether(
       produtoId,
       limite,
     );

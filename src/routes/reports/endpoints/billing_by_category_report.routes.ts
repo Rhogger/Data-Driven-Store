@@ -1,13 +1,13 @@
 import { FastifyPluginAsync } from 'fastify';
-import { BillingByCategoryReportRepository } from '@/repositories/reports/BillingByCategoryReportRepository';
+import { OrderRepository } from '@/repositories/order/OrderRepository';
 import { reportSchemas } from '../schema/report.schemas';
 
 const billingByCategoryReportRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/reports/billing-by-category', {
     schema: reportSchemas.billingByCategory(),
     handler: async (request, reply) => {
-      const repo = new BillingByCategoryReportRepository(fastify);
-      const data = await repo.generate();
+      const repo = new OrderRepository(fastify);
+      const data = await repo.getBillingByCategory();
       return reply.send(data);
     },
   });

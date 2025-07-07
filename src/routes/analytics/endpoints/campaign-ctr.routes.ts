@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { PurchasesByUtmRepository } from '@repositories/cassandra/purchases-by-utm/PurchasesByUtmRepository';
-import { EventsByDateRepository } from '@repositories/cassandra/events-by-date/EventsByDateRepository';
+import { PurchasesByUtmRepository } from '@/repositories/purchases-by-utm/PurchasesByUtmRepository';
+import { EventsByDateRepository } from '@/repositories/events-by-date/EventsByDateRepository';
 
 interface CampaignCTRParams {
   origemCampanha: string;

@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { SearchTermsAggregatedRepository } from '@repositories/cassandra/search-terms-aggregated/SearchTermsAggregatedRepository';
+import { SearchTermsAggregatedRepository } from '@/repositories/search-terms-aggregated/SearchTermsAggregatedRepository';
 
 export async function getTopSearchTermsHandler(request: FastifyRequest, reply: FastifyReply) {
   try {

@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { ProductRecommendationRepository } from '@/repositories/neo4j/recommendations/ProductRecommendationRepository';
+import { RecommendationRepository } from '@/repositories/recommendation/RecommendationRepository';
 
 interface ShortestPathParams {
   produtoOrigemId: string;
@@ -65,10 +65,10 @@ async function shortestPathHandler(
     }
 
     // Instancia o repository
-    const recommendationRepository = new ProductRecommendationRepository(this.neo4j);
+    const recommendationRepository = new RecommendationRepository(this);
 
     // Executa o algoritmo baseado no tipo escolhido
-    const caminho = await recommendationRepository.findShortestPathBetweenProducts(
+    const caminho = await recommendationRepository.getShortestPath(
       produtoOrigemId,
       produtoDestinoId,
       maxDistancia,

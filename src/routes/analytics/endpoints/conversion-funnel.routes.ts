@@ -1,12 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { ConversionFunnelRepository } from '@repositories/cassandra/conversion-funnel/ConversionFunnelRepository';
+import { AnalyticsRepository } from '@/repositories/analytics/AnalyticsRepository';
 
 export async function getConversionFunnelHandler(request: FastifyRequest, reply: FastifyReply) {
   try {
-    const cassandraClient = request.server.cassandra;
-    const conversionFunnelRepo = new ConversionFunnelRepository(cassandraClient);
+    const analyticsRepo = new AnalyticsRepository(request.server);
 
-    const stats = await conversionFunnelRepo.getConversionFunnelStats();
+    const stats = await analyticsRepo.getConversionFunnelStats();
 
     return reply.code(200).send({
       success: true,

@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { ClientRecommendationRepository } from '@/repositories/neo4j/recommendations/ClientRecommendationRepository';
+import { RecommendationRepository } from '@/repositories/recommendation/RecommendationRepository';
 
 interface UserBasedRecommendationsParams {
   clienteId: string;
@@ -48,10 +48,10 @@ async function userBasedRecommendationsHandler(
     }
 
     // Instancia o repository
-    const recommendationRepository = new ClientRecommendationRepository(this.neo4j);
+    const recommendationRepository = new RecommendationRepository(this);
 
     // Executa a recomendação baseada em clientes similares
-    const recomendacoes = await recommendationRepository.findUserBasedRecommendations(
+    const recomendacoes = await recommendationRepository.getUserBasedRecommendations(
       clienteId,
       limite,
       minSimilaridade,

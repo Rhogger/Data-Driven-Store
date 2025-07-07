@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
-import { OrderRepository, OrderItemInput } from '@repositories/postgres/orders/OrderRepository';
-import { ProductRepository } from '@repositories/mongodb/ProductRepository';
+import { OrderRepository } from '@repositories/order/OrderRepository';
+import { OrderItemInput } from '@repositories/order/OrderInterfaces';
+import { ProductRepository } from '@repositories/product/ProductRepository';
 import { orderSchemas } from '@routes/orders/schema/order.schemas';
 
 interface CreateOrderInput {
@@ -18,17 +19,14 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
   }>('/orders', {
     schema: orderSchemas.create(),
     handler: async (request, reply) => {
-      const { id_cliente, id_endereco, itens } = request.body;
+      const { id_cliente, itens } = request.body;
 
       if (!itens || itens.length === 0) {
         return reply.status(400).send({ message: 'O pedido deve conter pelo menos um item.' });
       }
 
-      const productRepository = new ProductRepository(fastify);
-      const orderRepository = new OrderRepository();
-
-      // É crucial obter um cliente do pool e liberá-lo no final para não esgotar as conexões
-      const pgClient = await fastify.pg.connect();
+      const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+      const orderRepository = new OrderRepository(fastify);
 
       try {
         // --- ETAPA 1: Validação e Coleta de Dados (MongoDB) ---
@@ -42,7 +40,7 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
           if (!product) {
             throw new Error(`Produto com ID ${item.id_produto} não encontrado.`);
           }
-          if (product.estoque < item.quantidade) {
+          if (!product.estoque || product.estoque < item.quantidade) {
             throw new Error(`Estoque insuficiente para o produto "${product.nome}".`);
           }
 
@@ -51,10 +49,6 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
 
           orderItemsForPg.push({
             id_produto: item.id_produto,
-            // ATENÇÃO: Seu schema no PG espera um INT para categoria, mas no Mongo é string.
-            // O ideal seria ter uma tabela de categorias no PG e buscar o ID correspondente.
-            // Para este exemplo, faremos uma conversão simples.
-            id_categoria: product.id_categoria,
             preco_unitario: product.preco,
             quantidade: item.quantidade,
             subtotal: subtotal,
@@ -67,10 +61,10 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
         }
 
         // --- ETAPA 2: Transação Atômica (PostgreSQL) ---
-        const createdOrder = await orderRepository.create(pgClient, {
+        const createdOrder = await orderRepository.create({
           id_cliente,
-          id_endereco,
           valor_total: totalValue,
+          status_pedido: 'Pendente',
           itens: orderItemsForPg,
         });
 
@@ -86,9 +80,6 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
         fastify.log.error(error, 'Erro ao processar criação de pedido');
         const errorMessage = error instanceof Error ? error.message : 'Erro interno do servidor';
         return reply.status(400).send({ success: false, message: errorMessage });
-      } finally {
-        // --- ETAPA FINAL: Liberar o cliente do pool do PostgreSQL ---
-        pgClient.release();
       }
     },
   });

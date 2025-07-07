@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ProductRepository } from '@repositories/mongodb/ProductRepository';
+import { ProductRepository } from '@repositories/product/ProductRepository';
 import { productSchemas } from '@routes/products/schema/product.schemas';
 
 interface UpdateProductInput {
@@ -64,7 +64,7 @@ const updateProductRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        const productRepository = new ProductRepository(fastify);
+        const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
         const product = await productRepository.update(request.params.id, request.body);
 
         if (!product) {

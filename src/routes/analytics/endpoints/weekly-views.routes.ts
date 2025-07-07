@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { ProductViewsAggregatedRepository } from '@repositories/cassandra/product-views-aggregated/ProductViewsAggregatedRepository';
+import { ProductViewsAggregatedRepository } from '@/repositories/product-views-aggregated/ProductViewsAggregatedRepository';
 
 export async function getWeeklyViewsHandler(request: FastifyRequest, reply: FastifyReply) {
   try {

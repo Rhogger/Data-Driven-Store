@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { PurchasesByUtmRepository } from '@repositories/cassandra/purchases-by-utm/PurchasesByUtmRepository';
+import { PurchasesByUtmRepository } from '@/repositories/purchases-by-utm/PurchasesByUtmRepository';
 
 interface UsersByUtmParams {
   utmSource: string;
