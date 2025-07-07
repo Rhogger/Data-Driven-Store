@@ -1,21 +1,33 @@
 #!/bin/bash
 
-# --- Verificar parâmetro de modo ---
-MODE=${1:-production}
+# Carregar variáveis do .env
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
 
-if [ "$MODE" = "dev" ] || [ "$MODE" = "development" ]; then
-    echo "🔥 MODO DESENVOLVIMENTO SELECIONADO (HOT RELOAD)"
-    export DEV_MODE=true
-    export BUILD_MODE=development
+echo "=========================================="
+echo "   DATA-DRIVEN STORE - AMBIENTE DOCKER"
+echo "=========================================="
+echo "📁 Diretório: $(pwd)"
+echo "🕒 Data/Hora: $(date)"
+echo ""
+
+# --- Usar APENAS NODE_ENV para determinar o modo ---
+if [ "${NODE_ENV}" = "development" ]; then
+    echo "🔥 CONFIGURANDO MODO DESENVOLVIMENTO (HOT RELOAD)"
     MODE_NAME="DESENVOLVIMENTO"
     MODE_EMOJI="🔥"
 else
-    echo "🏗️ MODO PRODUÇÃO SELECIONADO (BUILD)"
-    export DEV_MODE=false
-    export BUILD_MODE=production
+    echo "🏗️ CONFIGURANDO MODO PRODUÇÃO (BUILD)"
     MODE_NAME="PRODUÇÃO"
     MODE_EMOJI="🏗️"
 fi
+
+echo ""
+echo "🎯 MODO ATIVO: $MODE_NAME $MODE_EMOJI"
+echo "🌍 NODE_ENV: $NODE_ENV"
+echo "=========================================="
+echo ""
 
 # --- Configurações ---
 API_SERVICE_NAME="dds_api"
@@ -47,7 +59,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # 3. Reconstruir e subir o serviço da API
-if [ "$DEV_MODE" = "true" ]; then
+if [ "$NODE_ENV" = "development" ]; then
     echo "3. Reconstruindo a imagem da API para DESENVOLVIMENTO..."
     docker compose build --no-cache --force-rm "$API_SERVICE_NAME"
 else
@@ -68,7 +80,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-if [ "$DEV_MODE" = "true" ]; then
+if [ "$NODE_ENV" = "development" ]; then
     echo "--- Ambiente de desenvolvimento com HOT RELOAD iniciado! $MODE_EMOJI ---"
     echo "✅ Agora você pode editar arquivos em src/ e as mudanças serão refletidas automaticamente no container!"
     echo "📝 Para ver os logs da API em tempo real, execute: docker compose logs -f dds_api"

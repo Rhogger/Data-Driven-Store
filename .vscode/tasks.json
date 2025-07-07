@@ -2,10 +2,30 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "🚀 Start Development Environment (Hot Reload)",
+      "label": "🎨 Format Project",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "format"],
+      "group": "build",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "statusbar": {
+          "label": "Format"
+        }
+      }
+    },
+    {
+      "label": "🚀 Start Environment (uses NODE_ENV)",
       "type": "shell",
       "command": "./start.sh",
-      "args": ["dev"],
       "group": "test",
       "isBackground": true,
       "presentation": {
@@ -25,8 +45,8 @@
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "--- Iniciando ambiente Docker em modo DESENVOLVIMENTO",
-          "endsPattern": "Server listening at"
+          "beginsPattern": "CONFIGURANDO MODO",
+          "endsPattern": "Server listening at|Servidor Fastify rodando"
         }
       },
       "options": {

@@ -1,8 +1,18 @@
 #!/bin/bash
 
+echo "=========================================="
+echo "   CONTAINER - DATA-DRIVEN STORE API"
+echo "=========================================="
+echo "🌍 NODE_ENV: ${NODE_ENV}"
+echo "📁 Diretório: $(pwd)"
+echo "🕒 Data/Hora: $(date)"
+echo "=========================================="
+echo ""
+
 # Detectar modo baseado na variável de ambiente NODE_ENV
 if [ "${NODE_ENV}" = "development" ]; then
-    echo "--- Iniciando aplicação em modo DESENVOLVIMENTO com HOT RELOAD ---"
+    echo "🔥 INICIANDO EM MODO DESENVOLVIMENTO COM HOT RELOAD"
+    echo ""
 
     # 0. Aguardar bancos de dados estarem prontos
     echo "0. Aguardando bancos de dados ficarem prontos..."
@@ -12,7 +22,8 @@ if [ "${NODE_ENV}" = "development" ]; then
     echo "1. Iniciando aplicação com hot reload..."
     pnpm run dev:watch
 else
-    echo "--- Iniciando build e execução da aplicação (MODO PRODUÇÃO) ---"
+    echo "🏗️ INICIANDO EM MODO PRODUÇÃO (BUILD + EXECUÇÃO)"
+    echo ""
 
     # 0. Aguardar bancos de dados estarem prontos
     echo "0. Aguardando bancos de dados ficarem prontos..."

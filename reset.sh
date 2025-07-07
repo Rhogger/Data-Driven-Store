@@ -1,83 +1,107 @@
 #!/bin/bash
 
-# Script para reset completo do ambiente Docker
-# Logs com cores e emojis para melhor visualização
+# Carregar variáveis do .env
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
 
-# Cores para logs
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+echo "=========================================="
+echo "   DATA-DRIVEN STORE - RESET DOCKER"
+echo "=========================================="
+echo "📁 Diretório: $(pwd)"
+echo "🕒 Data/Hora: $(date)"
+echo ""
+
+# --- Usar APENAS NODE_ENV para determinar o modo ---
+if [ "${NODE_ENV}" = "development" ]; then
+    echo "🔥 CONFIGURANDO MODO DESENVOLVIMENTO (HOT RELOAD)"
+    MODE_NAME="DESENVOLVIMENTO"
+    MODE_EMOJI="🔥"
+else
+    echo "🏗️ CONFIGURANDO MODO PRODUÇÃO (BUILD)"
+    MODE_NAME="PRODUÇÃO"
+    MODE_EMOJI="🏗️"
+fi
+
+echo ""
+echo "🎯 MODO ATIVO: $MODE_NAME $MODE_EMOJI"
+echo "🌍 NODE_ENV: $NODE_ENV"
+echo "=========================================="
+echo ""
 
 # --- Configurações ---
 API_SERVICE_NAME="dds_api"
 
-echo -e "${RED}🔥 === RESET DOCKER ENVIRONMENT === ${NC}"
-echo -e "${CYAN}📦 Projeto: Data-Driven Store${NC}"
-echo -e "${CYAN}📅 $(date)${NC}"
-echo -e "${YELLOW}⚠️  Este script irá remover TODOS os containers, volumes e imagens do projeto${NC}"
+echo "🔥 === RESET COMPLETO DO AMBIENTE DOCKER === 🔥"
+echo "📦 Projeto: Data-Driven Store"
+echo "⚠️  Este script irá remover TODOS os containers, volumes e imagens do projeto"
 echo ""
 
-echo -e "${YELLOW}🔧 0. Corrigindo permissões dos diretórios de banco de dados...${NC}"
+echo "🔧 0. Corrigindo permissões dos diretórios de banco de dados..."
 ./fix-permissions.sh
-echo -e "${GREEN}✅ Permissões corrigidas${NC}"
+echo "✅ Permissões corrigidas"
 
-echo -e "${YELLOW}🧹 1. Derrubando e removendo containers e volumes do Docker Compose...${NC}"
+echo "🧹 1. Derrubando e removendo containers e volumes do Docker Compose..."
 docker compose down -v --rmi all
 
 if [ $? -ne 0 ]; then
-    echo -e "${YELLOW}⚠️  Erro ao derrubar Docker Compose. Tentando continuar a limpeza...${NC}"
+    echo "⚠️  Erro ao derrubar Docker Compose. Tentando continuar a limpeza..."
 fi
-echo -e "${GREEN}✅ Containers do Compose removidos${NC}"
+echo "✅ Containers do Compose removidos"
 
-echo -e "${YELLOW}🧹 2. Removendo containers parados restantes...${NC}"
+echo "🧹 2. Removendo containers parados restantes..."
 docker container prune -f
-echo -e "${GREEN}✅ Containers parados removidos${NC}"
+echo "✅ Containers parados removidos"
 
-echo -e "${YELLOW}🧹 3. Removendo volumes não utilizados...${NC}"
+echo "🧹 3. Removendo volumes não utilizados..."
 docker volume prune -f
-echo -e "${GREEN}✅ Volumes não utilizados removidos${NC}"
+echo "✅ Volumes não utilizados removidos"
 
-echo -e "${YELLOW}🧹 4. Removendo redes não utilizadas...${NC}"
+echo "🧹 4. Removendo redes não utilizadas..."
 docker network prune -f
-echo -e "${GREEN}✅ Redes não utilizadas removidas${NC}"
+echo "✅ Redes não utilizadas removidas"
 
-echo -e "${YELLOW}🧹 5. Removendo cache de build do Docker...${NC}"
+echo "🧹 5. Removendo cache de build do Docker..."
 docker builder prune -f
-echo -e "${GREEN}✅ Cache de build removido${NC}"
+echo "✅ Cache de build removido"
 
 echo ""
-echo -e "${BLUE}🔧 === RECONSTRUINDO AMBIENTE === ${NC}"
+echo "🔧 === RECONSTRUINDO AMBIENTE EM MODO $MODE_NAME === 🔧"
 
-# Definir modo desenvolvimento por padrão no reset
-export DEV_MODE=true
-export BUILD_MODE=development
+if [ "$NODE_ENV" = "development" ]; then
+    echo "🏗️  1. Reconstruindo a imagem da API sem cache (MODO DESENVOLVIMENTO)..."
+else
+    echo "🏗️  1. Reconstruindo a imagem da API sem cache (MODO PRODUÇÃO)..."
+fi
 
-echo -e "${YELLOW}🏗️  1. Reconstruindo a imagem da API sem cache (MODO DESENVOLVIMENTO)...${NC}"
 docker compose build --no-cache "$API_SERVICE_NAME"
 
 if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ ERRO: Falha ao reconstruir a imagem da API${NC}"
+    echo "❌ ERRO: Falha ao reconstruir a imagem da API"
     exit 1
 fi
-echo -e "${GREEN}✅ Imagem da API reconstruída${NC}"
+echo "✅ Imagem da API reconstruída"
 
-echo -e "${YELLOW}🚀 2. Subindo todos os serviços (MODO DESENVOLVIMENTO)...${NC}"
+echo "🚀 2. Subindo todos os serviços em modo $MODE_NAME..."
 docker compose up -d "$API_SERVICE_NAME"
 
 if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ ERRO: Falha ao subir o ambiente Docker${NC}"
+    echo "❌ ERRO: Falha ao subir o ambiente Docker"
     exit 1
 fi
-echo -e "${GREEN}✅ Serviços iniciados${NC}"
+echo "✅ Serviços iniciados"
 
 echo ""
-echo -e "${GREEN}🎉 RESET CONCLUÍDO COM SUCESSO! 🎉${NC}"
-echo -e "${PURPLE}📋 Verificando logs da API...${NC}"
-echo -e "${CYAN}💡 Pressione Ctrl+C para parar os logs${NC}"
+echo "🎉 RESET CONCLUÍDO COM SUCESSO! 🎉"
+if [ "$NODE_ENV" = "development" ]; then
+    echo "✅ Ambiente de desenvolvimento com HOT RELOAD pronto!"
+    echo "📝 Agora você pode editar arquivos em src/ e as mudanças serão refletidas automaticamente!"
+else
+    echo "✅ Ambiente de produção pronto!"
+    echo "📝 Aplicação rodando em modo produção (build compilado)"
+fi
+echo "📋 Verificando logs da API..."
+echo "💡 Pressione Ctrl+C para parar os logs"
 echo ""
 
 docker compose logs -f "$API_SERVICE_NAME"
