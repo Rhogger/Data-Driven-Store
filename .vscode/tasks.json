@@ -17,9 +17,68 @@
         "clear": false
       },
       "options": {
-        "statusbar": {
-          "label": "Format"
-        }
+        "statusbar": { "label": "Format" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
+      }
+    },
+    {
+      "label": "🧹 Lint Project",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "lint"],
+      "group": "build",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "statusbar": { "label": "Lint" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
+      }
+    },
+    {
+      "label": "🛠️ Lint Fix Project",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "lint:fix"],
+      "group": "build",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "statusbar": { "label": "Lint Fix" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
+      }
+    },
+    {
+      "label": "🏗️ Build Project",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build"],
+      "group": "build",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "statusbar": { "label": "Build" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
       }
     },
     {
@@ -50,9 +109,8 @@
         }
       },
       "options": {
-        "statusbar": {
-          "label": "Start"
-        }
+        "statusbar": { "label": "Start" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
       }
     },
     {
@@ -70,9 +128,8 @@
         "clear": true
       },
       "options": {
-        "statusbar": {
-          "label": "Reset"
-        }
+        "statusbar": { "label": "Reset" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
       }
     }
   ]
