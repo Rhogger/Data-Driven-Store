@@ -1,4 +1,3 @@
-// Helpers para respostas padrão
 const successResponse = (dataSchema?: any) => ({
   type: 'object',
   properties: {
@@ -17,7 +16,6 @@ const errorResponse = () => ({
   required: ['success', 'error'],
 });
 
-// Schema da categoria
 const categorySchema = {
   type: 'object',
   properties: {
@@ -29,7 +27,6 @@ const categorySchema = {
   required: ['id_categoria', 'nome', 'created_at'],
 };
 
-// Schema de parâmetros de ID
 const idParamSchema = {
   type: 'object',
   required: ['id'],
@@ -42,7 +39,6 @@ const idParamSchema = {
   },
 };
 
-// Schema para criação de categoria
 const createCategoryBodySchema = {
   type: 'object',
   required: ['nome'],
