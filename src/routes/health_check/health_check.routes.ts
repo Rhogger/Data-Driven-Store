@@ -1,13 +1,12 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { healthCheckSchemas } from '@routes/health-check/schema/health-check.schemas';
+import { healthCheckSchemas } from '@/routes/health_check/schema/health_check.schemas';
 
 async function healthCheckHandler(
   this: FastifyInstance,
-  request: FastifyRequest,
+  _request: FastifyRequest,
   reply: FastifyReply,
 ) {
   try {
-    // Verificar conexões com bancos de dados
     let mongoStatus = 'connected';
     let postgresStatus = 'connected';
     let redisStatus = 'connected';
@@ -15,35 +14,30 @@ async function healthCheckHandler(
     let cassandraStatus = 'connected';
 
     try {
-      // Verificar MongoDB
       await this.mongodb.client.db().admin().ping();
     } catch {
       mongoStatus = 'disconnected';
     }
 
     try {
-      // Verificar PostgreSQL
       await this.pg.query('SELECT 1');
     } catch {
       postgresStatus = 'disconnected';
     }
 
     try {
-      // Verificar Redis
       await this.redis.ping();
     } catch {
       redisStatus = 'disconnected';
     }
 
     try {
-      // Verificar Neo4j
       await this.neo4j.getServerInfo();
     } catch {
       neo4jStatus = 'disconnected';
     }
 
     try {
-      // Verificar Cassandra
       await this.cassandra.execute('SELECT now() FROM system.local');
     } catch {
       cassandraStatus = 'disconnected';
