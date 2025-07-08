@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import fastifyJwt from '@fastify/jwt';
 import postgresConnector from '@plugins/postgresConnector';
 import mongodbConnector from '@plugins/mongodbConnector';
 import redisConnector from '@plugins/redisConnector';
@@ -9,6 +10,11 @@ import apiRoutes from '@routes/index';
 const app = Fastify({
   logger: true,
   pluginTimeout: 60000, // 60 segundos para plugins (permite retry do Cassandra)
+});
+
+// Registrar plugin JWT
+app.register(fastifyJwt, {
+  secret: process.env.JWT_SECRET || 'supersecret',
 });
 
 // Registrar Swagger
