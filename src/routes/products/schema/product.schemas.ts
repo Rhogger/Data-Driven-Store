@@ -238,4 +238,26 @@ export const productSchemas = {
     description: 'Retorna todos os produtos cujo estoque está abaixo do valor informado.',
     ...lowStockSchema,
   }),
+
+  getAveragePriceByBrand: () => ({
+    tags: ['Products', 'Reports'],
+    summary: 'Calcular média de preço por marca',
+    description:
+      'Usa o Aggregation Framework do MongoDB para calcular o preço médio de produtos, agrupado por marca.',
+    response: {
+      200: successResponse({
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            marca: { type: 'string', description: 'Nome da marca' },
+            preco_medio: { type: 'number', description: 'Preço médio dos produtos da marca' },
+            total_produtos: { type: 'integer', description: 'Total de produtos da marca' },
+          },
+          required: ['marca', 'preco_medio', 'total_produtos'],
+        },
+      }),
+      500: errorResponse(),
+    },
+  }),
 };

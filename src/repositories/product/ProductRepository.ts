@@ -148,6 +148,34 @@ export class ProductRepository {
     return result.deletedCount > 0;
   }
 
+  // ===== AGGREGATION OPERATIONS =====
+
+  /**
+   * Calcular o preço médio por marca usando Aggregation Framework
+   */
+  async getAveragePriceByBrand(): Promise<any[]> {
+    const pipeline = [
+      {
+        $group: {
+          _id: '$marca',
+          preco_medio: { $avg: '$preco' },
+          total_produtos: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          marca: '$_id',
+          preco_medio: { $round: ['$preco_medio', 2] },
+          total_produtos: 1,
+        },
+      },
+      { $sort: { marca: 1 } },
+    ];
+
+    return this.mongoCollection.aggregate(pipeline).toArray();
+  }
+
   // ===== NEO4J OPERATIONS =====
 
   /**
