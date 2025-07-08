@@ -19,6 +19,7 @@ type Product = {
   estoque: number;
   reservado: number;
   disponivel: number;
+  atributos?: Record<string, any>;
   avaliacoes: { id_cliente: number; nota: number; comentario?: string; data_avaliacao: Date }[];
   created_at: Date;
   updated_at: Date;
@@ -265,6 +266,31 @@ async function seedMongo(
 
   for (let i = 0; i < TOTAL_PRODUCTS; i++) {
     const estoque = Math.floor(Math.random() * 150) + 50; // Estoque entre 50 e 200
+
+    // Adicionando atributos dinâmicos para teste
+    const productIndex = i % productNames.length;
+    let atributos = {};
+    if (productNames[productIndex].includes('Notebook')) {
+      atributos = {
+        processador: i % 2 === 0 ? 'i7' : 'i9',
+        ram: i % 2 === 0 ? '16GB' : '32GB',
+        armazenamento: '1TB SSD',
+        cor: 'Prata',
+      };
+    } else if (productNames[productIndex].includes('Smartphone')) {
+      atributos = {
+        armazenamento: i % 2 === 0 ? '128GB' : '256GB',
+        cor: i % 2 === 0 ? 'Preto' : 'Branco',
+        camera: '48MP',
+      };
+    } else if (productNames[productIndex].includes('Cadeira')) {
+      atributos = {
+        material: 'Couro Sintético',
+        cor: 'Preto e Vermelho',
+        ajustavel: true,
+      };
+    }
+
     productsToInsert.push({
       nome: `${productNames[i % productNames.length]} v${Math.floor(i / productNames.length) + 1}`,
       descricao: `Descrição detalhada do produto ${i + 1}. Marca ${marcas[i % marcas.length]}. Este item possui características únicas e é feito com materiais de alta qualidade.`,
@@ -273,6 +299,7 @@ async function seedMongo(
       estoque: estoque,
       reservado: 0, // Começa com 0
       marca: marcas[i % marcas.length],
+      atributos: atributos,
       avaliacoes: generateRandomReviews(clientIds),
       created_at: new Date(),
       updated_at: new Date(),
