@@ -5,14 +5,21 @@ import { addressSchemas } from '@routes/addresses/schema/address.schemas';
 
 const createAddressRoute = async (fastify: FastifyInstance) => {
   fastify.post<{
-    Body: CreateAddressInput;
+    Body: Omit<CreateAddressInput, 'id_cliente'>;
   }>('/addresses', {
     schema: addressSchemas.create(),
-    handler: async (request: FastifyRequest<{ Body: CreateAddressInput }>, reply: FastifyReply) => {
+    preHandler: fastify.authenticate,
+    handler: async (
+      request: FastifyRequest<{ Body: Omit<CreateAddressInput, 'id_cliente'> }>,
+      reply: FastifyReply,
+    ) => {
       const addressRepository = new AddressRepository(fastify);
 
       try {
-        const address = await addressRepository.create(request.body);
+        const address = await addressRepository.create({
+          ...request.body,
+          id_cliente: request.user?.id_cliente,
+        });
 
         return reply.status(201).send({ success: true, data: address });
       } catch (error) {

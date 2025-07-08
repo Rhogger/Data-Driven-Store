@@ -14,9 +14,6 @@ export class AddressRepository {
     this.pg = fastify.pg;
   }
 
-  /**
-   * Criar um novo endereço
-   */
   async create(addressData: CreateAddressInput): Promise<Address> {
     const query = `
       INSERT INTO enderecos (
@@ -41,9 +38,6 @@ export class AddressRepository {
     return result.rows[0];
   }
 
-  /**
-   * Buscar endereço por ID
-   */
   async findById(id_endereco: number): Promise<Address | null> {
     const query = `
       SELECT * FROM enderecos
@@ -54,9 +48,6 @@ export class AddressRepository {
     return result.rows[0] || null;
   }
 
-  /**
-   * Buscar endereço por ID com dados da cidade/estado
-   */
   async findByIdWithCity(id_endereco: number): Promise<AddressWithCity | null> {
     const query = `
       SELECT
@@ -74,9 +65,6 @@ export class AddressRepository {
     return result.rows[0] || null;
   }
 
-  /**
-   * Buscar todos os endereços de um cliente
-   */
   async findByClientId(id_cliente: number): Promise<AddressWithCity[]> {
     const query = `
       SELECT
@@ -95,9 +83,6 @@ export class AddressRepository {
     return result.rows;
   }
 
-  /**
-   * Atualizar um endereço
-   */
   async update(id_endereco: number, addressData: UpdateAddressInput): Promise<Address | null> {
     const fields: string[] = [];
     const values: any[] = [];
@@ -150,9 +135,6 @@ export class AddressRepository {
     return result.rows[0] || null;
   }
 
-  /**
-   * Deletar um endereço
-   */
   async delete(id_endereco: number): Promise<boolean> {
     const query = `
       DELETE FROM enderecos
@@ -163,9 +145,6 @@ export class AddressRepository {
     return (result.rowCount ?? 0) > 0;
   }
 
-  /**
-   * Verificar se um endereço pertence a um cliente
-   */
   async belongsToClient(id_endereco: number, id_cliente: number): Promise<boolean> {
     const query = `
       SELECT 1 FROM enderecos

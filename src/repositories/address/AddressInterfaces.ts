@@ -1,5 +1,3 @@
-// Interfaces para o domínio Address (PostgreSQL)
-
 export interface Address {
   id_endereco: number;
   id_cliente: number;

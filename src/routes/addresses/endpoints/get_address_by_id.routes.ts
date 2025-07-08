@@ -7,6 +7,7 @@ const getAddressByIdRoute = async (fastify: FastifyInstance) => {
     Params: { id: number };
   }>('/addresses/:id', {
     schema: addressSchemas.findById(),
+    preHandler: fastify.authenticate,
     handler: async (request: FastifyRequest<{ Params: { id: number } }>, reply: FastifyReply) => {
       const addressRepository = new AddressRepository(fastify);
 
