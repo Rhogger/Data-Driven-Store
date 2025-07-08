@@ -47,11 +47,21 @@ wait_for_healthy_container "redis" || exit 1
 wait_for_healthy_container "neo4j_db" || exit 1
 wait_for_healthy_container "cassandra_db" || exit 1
 
+# Aguardar a API ficar saudável antes de executar comandos nela
+# Usamos o nome do container 'datadriven_api' que foi definido no docker-compose.yml
+echo -e "\n${YELLOW}⏳ Aguardando a API 'datadriven_api' ficar saudável...${NC}"
+wait_for_healthy_container "datadriven_api" || exit 1
+
+# Adiciona uma pequena pausa. A API pode se tornar 'healthy' (responder a pings HTTP)
+# um pouco antes de estar 100% pronta para operações de banco de dados intensas como o seeding.
+echo -e "${CYAN}API está saudável. Aguardando 5 segundos extras para garantir a estabilização...${NC}"
+sleep 5
+
 # 2. Executar o script de seed orquestrado via pnpm
-echo -e "\n${CYAN}📦 Executando o script de seed principal (seed-all.ts)...${NC}"
-pnpm seed:all
+echo -e "\n${CYAN}📦 Executando o script de seed principal (seed-all.ts) no serviço 'dds_api'...${NC}"
+docker compose exec -T dds_api pnpm seed:all
 if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ Falha ao executar o script de seed 'pnpm seed:all'.${NC}"
+    echo -e "${RED}❌ Falha ao executar o script de seed 'pnpm seed:all' no serviço 'dds_api'.${NC}"
     exit 1
 fi
 

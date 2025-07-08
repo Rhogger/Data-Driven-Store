@@ -128,7 +128,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_HOST: postgres_db
+      POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
 
       MONGODB_URI: ${MONGODB_URI}
@@ -147,6 +147,14 @@ services:
       CASSANDRA_USER: ${CASSANDRA_USER}
       CASSANDRA_PASSWORD: ${CASSANDRA_PASSWORD}
       CASSANDRA_KEYSPACE: ${CASSANDRA_KEYSPACE}
+
+    healthcheck:
+      # Tenta acessar o endpoint de documentação para verificar se a API está online
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-3000}/docs"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s # Dá tempo para a API iniciar, compilar e rodar
 
     depends_on:
       postgres:

@@ -10,11 +10,47 @@ const NUM_EVENTS = 1000;
 interface Product {
   _id: { toHexString: () => string };
   nome: string;
-  // Outras propriedades do produto, se necessário
+  preco: number;
+  marca: string;
+  categorias: number[];
+}
+
+interface ProductWithUuid extends Product {
+  cassandra_uuid: string;
 }
 
 interface ClientData {
   id_cliente: number;
+}
+
+interface ClientWithUuid extends ClientData {
+  cassandra_uuid: string;
+}
+
+async function executeCounterBatch(
+  cassandraClient: Client,
+  keyspace: string,
+  table: string,
+  updates: { query: string; params: any[] }[],
+) {
+  if (updates.length === 0) {
+    return;
+  }
+
+  console.log(`   -> Atualizando contadores em '${table}'...`);
+  const BATCH_SIZE = 100;
+  const totalUpdates = updates.length;
+  let processedCount = 0;
+
+  for (let i = 0; i < totalUpdates; i += BATCH_SIZE) {
+    const chunk = updates.slice(i, i + BATCH_SIZE);
+    await cassandraClient.batch(chunk, { prepare: true, logged: false });
+    processedCount += chunk.length;
+    process.stdout.write(`\r      - Processando ${processedCount}/${totalUpdates} atualizações...`);
+  }
+
+  process.stdout.write('\n');
+  console.log(`✅ [Cassandra] Atualizados ${totalUpdates} registros de contadores em ${table}.`);
 }
 
 async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient: MongoClient) {
@@ -39,16 +75,27 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
 
     // 2. Buscar dados de referência do PostgreSQL e MongoDB
     const pgClient = await pgPool.connect();
-    const { rows: clients }: { rows: ClientData[] } = await pgClient.query(
+    const { rows: pgClients }: { rows: ClientData[] } = await pgClient.query(
       'SELECT id_cliente FROM clientes',
     );
     pgClient.release();
 
-    const products = await mongoClient
+    // Associa um UUID a cada cliente para uso no Cassandra, resolvendo o erro de tipo.
+    const clients: ClientWithUuid[] = pgClients.map((c) => ({
+      ...c,
+      cassandra_uuid: randomUUID(),
+    }));
+
+    const mongoProducts = await mongoClient
       .db(databaseConfig.mongodb.database)
       .collection<Product>('products')
       .find({})
       .toArray();
+
+    const products: ProductWithUuid[] = mongoProducts.map((p) => ({
+      ...p,
+      cassandra_uuid: randomUUID(),
+    }));
 
     if (!clients || clients.length === 0) {
       throw new Error('[Cassandra] Nenhum cliente encontrado no PostgreSQL.');
@@ -71,6 +118,7 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
 
     for (let i = 0; i < NUM_EVENTS; i++) {
       const client = clients[Math.floor(Math.random() * clients.length)];
+
       const product = products[Math.floor(Math.random() * products.length)];
       const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
       const utmSource = utmSources[Math.floor(Math.random() * utmSources.length)];
@@ -81,7 +129,7 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
       date.setHours(0, 0, 0, 0);
 
       const eventId = randomUUID();
-      const userId = client.id_cliente.toString(); // Usando id_cliente do PostgreSQL como userId
+      const userId = client.cassandra_uuid; // Usando o UUID gerado para o cliente
 
       // Evento base
       const baseEvent = {
@@ -90,13 +138,17 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
         id_evento: eventId,
         id_usuario: userId,
         tipo_evento: eventType,
-        id_produto: product._id.toHexString(),
+        id_produto: product.cassandra_uuid,
         termo_busca: Math.random() < 0.2 ? `termo${Math.floor(Math.random() * 10)}` : null,
-        url_pagina: Math.random() < 0.5 ? `/produto/${product._id.toHexString()}` : '/',
+        url_pagina: Math.random() < 0.5 ? `/produto/${product.cassandra_uuid}` : '/',
         origem_campanha: Math.random() < 0.3 ? utmSource : null,
         detalhes_evento: {
           ip: `192.168.1.${Math.floor(Math.random() * 255)}`,
           userAgent: `UserAgent${Math.floor(Math.random() * 10)}`,
+          nome_produto: product.nome,
+          preco_produto: product.preco.toString(),
+          marca_produto: product.marca,
+          categorias_produto: product.categorias.join(','),
         },
       };
 
@@ -104,7 +156,7 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
       eventosPorUsuario.push(baseEvent);
 
       // Funil de Conversão
-      const funilKey = `${userId}-${product._id.toHexString()}`;
+      const funilKey = `${userId}-${product.cassandra_uuid}`;
       const existingFunil = funilConversao.find(
         (f) => `${f.id_usuario}-${f.id_produto}` === funilKey,
       );
@@ -113,7 +165,7 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
         if (!existingFunil) {
           funilConversao.push({
             id_usuario: userId,
-            id_produto: product._id.toHexString(),
+            id_produto: product.cassandra_uuid,
             visualizou: true,
             adicionou_carrinho: false,
             comprou: false,
@@ -194,18 +246,18 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
     await insertInBatch(cassandraClient, keyspace, 'compras_por_utm_source', comprasPorUtm);
 
     // Executa os batches de atualização para as tabelas de contador
-    if (termosBuscaUpdates.length > 0) {
-      await cassandraClient.batch(termosBuscaUpdates, { prepare: true });
-      console.log(
-        `✅ [Cassandra] Atualizados ${termosBuscaUpdates.length} registros de contadores em termos_busca_agregados_por_dia.`,
-      );
-    }
-    if (visualizacoesProdutoUpdates.length > 0) {
-      await cassandraClient.batch(visualizacoesProdutoUpdates, { prepare: true });
-      console.log(
-        `✅ [Cassandra] Atualizados ${visualizacoesProdutoUpdates.length} registros de contadores em visualizacoes_produto_agregadas_por_dia.`,
-      );
-    }
+    await executeCounterBatch(
+      cassandraClient,
+      keyspace,
+      'termos_busca_agregados_por_dia',
+      termosBuscaUpdates,
+    );
+    await executeCounterBatch(
+      cassandraClient,
+      keyspace,
+      'visualizacoes_produto_agregadas_por_dia',
+      visualizacoesProdutoUpdates,
+    );
 
     console.log(`✅ [Cassandra] Seed concluído com ${NUM_EVENTS} eventos simulados.`);
   } catch (error) {
@@ -216,7 +268,7 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
 }
 
 /**
- * Insere um array de objetos em uma tabela do Cassandra usando uma única query preparada em batch.
+ * Insere um array de objetos em uma tabela do Cassandra usando lotes menores para evitar timeouts e erros de "batch too large".
  * Esta função é otimizada para INSERTs.
  */
 async function insertInBatch(
@@ -230,6 +282,10 @@ async function insertInBatch(
     return;
   }
 
+  const BATCH_SIZE = 100; // Tamanho do lote para evitar o erro "Batch too large"
+  const totalRows = data.length;
+  let insertedCount = 0;
+
   const firstRow = data[0];
   const columns = Object.keys(firstRow).join(', ');
   const placeholders = Object.keys(firstRow)
@@ -237,10 +293,21 @@ async function insertInBatch(
     .join(', ');
   const query = `INSERT INTO ${keyspace}.${table} (${columns}) VALUES (${placeholders})`;
 
-  const batchQueries = data.map((row) => ({ query, params: Object.values(row) }));
+  for (let i = 0; i < totalRows; i += BATCH_SIZE) {
+    const chunk = data.slice(i, i + BATCH_SIZE);
+    const batchQueries = chunk.map((row) => ({ query, params: Object.values(row) }));
 
-  await cassandraClient.batch(batchQueries, { prepare: true, logged: false });
-  console.log(`✅ [Cassandra] Inseridos ${data.length} registros na tabela ${table}.`);
+    await cassandraClient.batch(batchQueries, { prepare: true, logged: false });
+
+    insertedCount += chunk.length;
+    // Usar process.stdout.write para uma linha de progresso que se atualiza
+    process.stdout.write(
+      `\r   -> Inserindo em '${table}': ${insertedCount}/${totalRows} registros...`,
+    );
+  }
+
+  process.stdout.write('\n'); // Garante que o próximo log comece em uma nova linha
+  console.log(`✅ [Cassandra] Inseridos ${totalRows} registros na tabela ${table}.`);
 }
 
 export default seedCassandra;
