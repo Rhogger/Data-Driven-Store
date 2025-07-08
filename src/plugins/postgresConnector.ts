@@ -5,12 +5,6 @@ import { Pool } from 'pg';
 
 import { databaseConfig } from '@config/database';
 
-declare module 'fastify' {
-  interface FastifyInstance {
-    pg: Pool;
-  }
-}
-
 const postgresConnector: FastifyPluginAsync = async (fastify, _opts) => {
   const pool = new Pool(databaseConfig.postgres);
 

@@ -8,11 +8,8 @@ import averagePriceByBrandRoutes from '@routes/products/endpoints/average_price_
 import searchProductsRoutes from '@routes/products/endpoints/search_products.routes';
 import addFieldByCategoryRoutes from '@routes/products/endpoints/add_field_by_category.routes';
 import listProductReviewsRoutes from '@routes/products/endpoints/list_product_reviews.routes';
-import { productRankingSchemas } from './schema/product-ranking.schemas';
-import {
-  getProductRankingHandler,
-  incrementProductViewHandler,
-} from './endpoints/product-ranking.routes';
+import getProductRankingRoute from '@routes/products/endpoints/get_product_ranking.routes';
+import incrementProductViewRoute from '@routes/products/endpoints/increment_product_view.routes';
 
 const productRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(listProductsRoutes);
@@ -24,18 +21,8 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(searchProductsRoutes);
   await fastify.register(addFieldByCategoryRoutes);
   await fastify.register(listProductReviewsRoutes);
-
-  // Ranking de produtos
-  fastify.get('/products/ranking', {
-    schema: productRankingSchemas.getRanking,
-    handler: getProductRankingHandler,
-  });
-
-  // Incrementar visualização de produto
-  fastify.post('/products/:id_produto/view', {
-    schema: productRankingSchemas.incrementView,
-    handler: incrementProductViewHandler,
-  });
+  await fastify.register(getProductRankingRoute);
+  await fastify.register(incrementProductViewRoute);
 };
 
 export default productRoutes;

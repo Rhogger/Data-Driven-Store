@@ -17,6 +17,6 @@
       "@routes/*": ["src/routes/*"]
     }
   },
-  "include": ["src/**/*.ts", "db/**/*.ts"],
+  "include": ["src/**/*.ts", "src/types/**/*.d.ts", "db/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

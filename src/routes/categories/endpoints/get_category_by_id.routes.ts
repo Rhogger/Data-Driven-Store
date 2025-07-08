@@ -9,6 +9,7 @@ interface GetCategoryParams {
 const getCategoryByIdRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get<{ Params: GetCategoryParams }>('/categories/:id', {
     schema: categorySchemas.getById(),
+    preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       try {
         const categoryId = parseInt(request.params.id, 10);

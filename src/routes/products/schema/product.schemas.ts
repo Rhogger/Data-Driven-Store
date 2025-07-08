@@ -1,12 +1,25 @@
-// Helpers para respostas padrão
-const successResponse = (dataSchema?: any) => ({
-  type: 'object',
-  properties: {
-    success: { type: 'boolean', default: true },
-    ...(dataSchema && { data: dataSchema }),
-  },
-  required: ['success'],
-});
+const successResponse = (dataSchema?: any) => {
+  if (!dataSchema) {
+    return {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', default: true },
+      },
+      required: ['success'],
+    };
+  }
+  return {
+    type: 'object',
+    properties: {
+      success: { type: 'boolean', default: true },
+      data: {
+        type: 'object',
+        ...dataSchema,
+      },
+    },
+    required: ['success', 'data'],
+  };
+};
 
 const errorResponse = () => ({
   type: 'object',
@@ -55,7 +68,6 @@ const productSchema = {
   type: 'object',
   additionalProperties: true, // Permitir campos dinâmicos como 'em_promocao'
   properties: {
-    _id: { type: 'string', description: 'ID único do produto' },
     id_produto: { type: 'string', description: 'ID único do produto (mapeado de _id)' },
     nome: { type: 'string', description: 'Nome do produto' },
     descricao: { type: 'string', description: 'Descrição do produto' },
@@ -75,18 +87,25 @@ const productSchema = {
       additionalProperties: true,
     },
     avaliacoes: {
-      type: 'object',
+      type: 'array',
       description: 'Avaliações do produto',
-      additionalProperties: true,
+      items: {
+        type: 'object',
+        properties: {
+          id_cliente: { type: 'integer' },
+          nota: { type: 'integer' },
+          comentario: { type: 'string' },
+        },
+        required: ['id_cliente', 'nota', 'comentario'],
+      },
     },
     created_at: { type: 'string', format: 'date-time', description: 'Data de criação' },
     updated_at: { type: 'string', format: 'date-time', description: 'Data de atualização' },
   },
   required: ['nome', 'preco', 'categorias', 'estoque', 'reservado', 'disponivel'],
-  oneOf: [{ required: ['_id'] }, { required: ['id_produto'] }],
+  oneOf: [{ required: ['id_produto'] }],
 };
 
-// Schema para criação de produto
 const createProductBodySchema = {
   type: 'object',
   required: ['nome', 'preco', 'categorias', 'estoque'],
@@ -111,7 +130,6 @@ const createProductBodySchema = {
   additionalProperties: false,
 };
 
-// Schema para atualização de produto
 const updateProductBodySchema = {
   type: 'object',
   properties: {
@@ -135,29 +153,11 @@ const updateProductBodySchema = {
   minProperties: 1,
 };
 
-// Schema de parâmetros de ID
 const idParamSchema = {
   type: 'object',
   required: ['id'],
   properties: {
     id: { type: 'string', description: 'ID do produto' },
-  },
-};
-
-// Schema de query para paginação
-const paginationQuerySchema = {
-  type: 'object',
-  properties: {
-    page: {
-      type: 'string',
-      pattern: '^[1-9][0-9]*$',
-      description: 'Número da página (padrão: 1)',
-    },
-    pageSize: {
-      type: 'string',
-      pattern: '^[1-9][0-9]*$',
-      description: 'Itens por página (padrão: 20, máximo: 100)',
-    },
   },
 };
 
@@ -184,7 +184,6 @@ const lowStockSchema = {
             type: 'array',
             items: { type: 'integer' },
           },
-          // adicione outros campos se quiser
         },
         required: ['id_produto', 'nome', 'estoque', 'reservado', 'disponivel'],
       },
@@ -195,6 +194,7 @@ const lowStockSchema = {
 export const productSchemas = {
   create: () => ({
     tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     summary: 'Criar produto',
     description:
       'Cria um novo produto no sistema. Campos não permitidos: reservado, disponivel, avaliacoes (são gerenciados automaticamente).',
@@ -208,6 +208,7 @@ export const productSchemas = {
 
   getById: () => ({
     tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     summary: 'Buscar produto por ID',
     description: 'Busca um produto específico pelo seu ID',
     params: idParamSchema,
@@ -220,18 +221,21 @@ export const productSchemas = {
 
   list: () => ({
     tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     summary: 'Listar produtos',
-    description: 'Lista produtos com paginação',
-    querystring: paginationQuerySchema,
+    description: 'Lista todos os produtos',
     response: {
-      200: paginatedResponse(productSchema),
-      400: errorResponse(),
+      200: successResponse({
+        type: 'array',
+        items: productSchema,
+      }),
       500: errorResponse(),
     },
   }),
 
   update: () => ({
     tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     summary: 'Atualizar produto',
     description:
       'Atualiza um produto existente. Campos não permitidos: estoque, reservado, disponivel, avaliacoes (são gerenciados automaticamente).',
@@ -247,6 +251,7 @@ export const productSchemas = {
 
   lowStock: () => ({
     tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     summary: 'Listar produtos com estoque abaixo do limiar',
     description: 'Retorna todos os produtos cujo estoque está abaixo do valor informado.',
     ...lowStockSchema,

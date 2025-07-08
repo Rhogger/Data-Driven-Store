@@ -1,4 +1,3 @@
-// Helpers para respostas padrão
 const successResponse = (dataSchema?: any) => ({
   type: 'object',
   properties: {
@@ -17,7 +16,6 @@ const errorResponse = () => ({
   required: ['success', 'error'],
 });
 
-// Schema da categoria
 const categorySchema = {
   type: 'object',
   properties: {
@@ -29,7 +27,6 @@ const categorySchema = {
   required: ['id_categoria', 'nome', 'created_at'],
 };
 
-// Schema de parâmetros de ID
 const idParamSchema = {
   type: 'object',
   required: ['id'],
@@ -42,7 +39,6 @@ const idParamSchema = {
   },
 };
 
-// Schema para criação de categoria
 const createCategoryBodySchema = {
   type: 'object',
   required: ['nome'],
@@ -60,6 +56,7 @@ const createCategoryBodySchema = {
 export const categorySchemas = {
   create: () => ({
     tags: ['Categories'],
+    security: [{ bearerAuth: [] }],
     summary: 'Criar categoria',
     description: 'Cria uma nova categoria no sistema',
     body: createCategoryBodySchema,
@@ -72,6 +69,7 @@ export const categorySchemas = {
 
   getById: () => ({
     tags: ['Categories'],
+    security: [{ bearerAuth: [] }],
     summary: 'Buscar categoria por ID',
     description: 'Busca uma categoria específica pelo seu ID',
     params: idParamSchema,
@@ -85,6 +83,7 @@ export const categorySchemas = {
 
   list: () => ({
     tags: ['Categories'],
+    security: [{ bearerAuth: [] }],
     summary: 'Listar categorias',
     description: 'Lista todas as categorias disponíveis',
     response: {

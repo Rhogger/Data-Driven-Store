@@ -1,72 +1,16 @@
-import { FastifyPluginAsync } from 'fastify';
-import { AddressRepository } from '@repositories/address/AddressRepository';
-import { CreateAddressInput } from '@repositories/address/AddressInterfaces';
-import { addressSchemas } from './schema/address.schemas';
+import { FastifyInstance } from 'fastify';
+import createAddressRoute from '@routes/addresses/endpoints/create_address.routes';
+import getAddressByIdRoute from '@routes/addresses/endpoints/get_address_by_id.routes';
+import getAddressesByCustomerIdRoute from '@/routes/addresses/endpoints/get_addresses_by_customer_id.routes';
+import updateAddressRoute from '@routes/addresses/endpoints/update_address.routes';
+import deleteAddressRoute from './endpoints/delete_address.routes';
 
-const addressRoutes: FastifyPluginAsync = async (fastify) => {
-  // Criar endereço
-  fastify.post<{
-    Body: CreateAddressInput;
-  }>('/addresses', {
-    schema: addressSchemas.create(),
-    handler: async (request, reply) => {
-      const addressRepository = new AddressRepository(fastify);
-
-      try {
-        const address = await addressRepository.create(request.body);
-        return reply.status(201).send({ success: true, data: address });
-      } catch (error) {
-        fastify.log.error(error, 'Erro ao criar endereço');
-        const errorMessage = error instanceof Error ? error.message : 'Erro interno do servidor';
-        return reply.status(400).send({ success: false, message: errorMessage });
-      }
-    },
-  });
-
-  // Buscar endereço por ID
-  fastify.get<{
-    Params: { id: number };
-  }>('/addresses/:id', {
-    schema: addressSchemas.findById(),
-    handler: async (request, reply) => {
-      const addressRepository = new AddressRepository(fastify);
-      const { id } = request.params;
-
-      try {
-        const address = await addressRepository.findByIdWithCity(id);
-
-        if (!address) {
-          return reply.status(404).send({ success: false, message: 'Endereço não encontrado' });
-        }
-
-        return reply.send({ success: true, data: address });
-      } catch (error) {
-        fastify.log.error(error, 'Erro ao buscar endereço');
-        const errorMessage = error instanceof Error ? error.message : 'Erro interno do servidor';
-        return reply.status(500).send({ success: false, message: errorMessage });
-      }
-    },
-  });
-
-  // Buscar endereços de um cliente
-  fastify.get<{
-    Params: { clientId: number };
-  }>('/addresses/client/:clientId', {
-    schema: addressSchemas.findByClientId(),
-    handler: async (request, reply) => {
-      const addressRepository = new AddressRepository(fastify);
-      const { clientId } = request.params;
-
-      try {
-        const addresses = await addressRepository.findByClientId(clientId);
-        return reply.send({ success: true, data: addresses });
-      } catch (error) {
-        fastify.log.error(error, 'Erro ao buscar endereços do cliente');
-        const errorMessage = error instanceof Error ? error.message : 'Erro interno do servidor';
-        return reply.status(500).send({ success: false, message: errorMessage });
-      }
-    },
-  });
+const addressRoutes = async (fastify: FastifyInstance) => {
+  await fastify.register(createAddressRoute);
+  await fastify.register(getAddressByIdRoute);
+  await fastify.register(getAddressesByCustomerIdRoute);
+  await fastify.register(updateAddressRoute);
+  await fastify.register(deleteAddressRoute);
 };
 
 export default addressRoutes;

@@ -1,20 +1,11 @@
-import { FastifyPluginAsync } from 'fastify';
+import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 
-import { MongoClient, Db } from 'mongodb';
+import { MongoClient } from 'mongodb';
 
 import { databaseConfig } from '@config/database';
 
-declare module 'fastify' {
-  interface FastifyInstance {
-    mongodb: {
-      client: MongoClient;
-      db: Db;
-    };
-  }
-}
-
-const mongodbConnector: FastifyPluginAsync = async (fastify, _opts) => {
+const mongodbConnector: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   const client = new MongoClient(databaseConfig.mongodb.uri);
 
   try {
@@ -40,4 +31,6 @@ const mongodbConnector: FastifyPluginAsync = async (fastify, _opts) => {
   });
 };
 
-export default fp(mongodbConnector);
+export default fp(mongodbConnector, {
+  name: 'mongodb-connector',
+});

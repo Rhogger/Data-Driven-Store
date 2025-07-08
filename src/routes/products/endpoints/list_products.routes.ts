@@ -8,48 +8,16 @@ interface ListProductsQuery {
 }
 
 const listProductsRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get<{
-    Querystring: ListProductsQuery;
-  }>('/products', {
+  fastify.get('/products', {
     schema: productSchemas.list(),
+    preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       try {
-        const page = parseInt(request.query.page || '1', 10);
-        const pageSize = Math.min(parseInt(request.query.pageSize || '20', 10), 100);
-
-        // Validações de paginação
-        if (page < 1) {
-          return reply.status(400).send({
-            success: false,
-            error: 'Número da página deve ser maior que zero',
-          });
-        }
-
-        if (pageSize < 1) {
-          return reply.status(400).send({
-            success: false,
-            error: 'Tamanho da página deve ser maior que zero',
-          });
-        }
-
-        const skip = (page - 1) * pageSize;
         const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
-        const products = await productRepository.findAll(pageSize + 1, skip);
-
-        // Verificar se há mais páginas
-        const hasMore = products.length > pageSize;
-        if (hasMore) {
-          products.pop(); // Remover o item extra
-        }
-
+        const products = await productRepository.findAll();
         return reply.send({
           success: true,
           data: products,
-          pagination: {
-            page,
-            pageSize,
-            hasMore,
-          },
         });
       } catch (error) {
         fastify.log.error(error);

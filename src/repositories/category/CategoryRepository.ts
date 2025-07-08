@@ -55,28 +55,6 @@ export class CategoryRepository {
     return result.rows.length > 0;
   }
 
-  async findByName(nome: string): Promise<CategoryRow | null> {
-    const result = await this.pg.query<CategoryRow>('SELECT * FROM categorias WHERE nome = $1', [
-      nome,
-    ]);
-    return result.rows[0] || null;
-  }
-
-  async findChildren(idCategoriaPai: number): Promise<CategoryRow[]> {
-    const result = await this.pg.query<CategoryRow>(
-      'SELECT * FROM categorias WHERE id_categoria_pai = $1 ORDER BY nome',
-      [idCategoriaPai],
-    );
-    return result.rows;
-  }
-
-  async findRoot(): Promise<CategoryRow[]> {
-    const result = await this.pg.query<CategoryRow>(
-      'SELECT * FROM categorias WHERE id_categoria_pai IS NULL ORDER BY nome',
-    );
-    return result.rows;
-  }
-
   // ============================================================================
   // Neo4j Operations (Relacionamentos e análises)
   // ============================================================================
@@ -127,14 +105,10 @@ export class CategoryRepository {
     }
   }
 
-  /**
-   * Deletar Categorias (SOMENTE se não tiver relações com nenhum produto)
-   */
   async deleteCategoryNode(id_categoria: string): Promise<DeleteNodeResult> {
     const session: Session = this.neo4jDriver.session();
 
     try {
-      // Verificar se há produtos relacionados a esta categoria
       const checkQuery = `
         MATCH (c:Categoria {id_categoria: $id_categoria})
         OPTIONAL MATCH (c)<-[:PERTENCE_A]-(p:Produto)
@@ -155,7 +129,6 @@ export class CategoryRepository {
         }
       }
 
-      // Se não há produtos relacionados, deletar a categoria
       const deleteQuery = `
         MATCH (c:Categoria {id_categoria: $id_categoria})
         DETACH DELETE c
@@ -192,9 +165,6 @@ export class CategoryRepository {
     }
   }
 
-  /**
-   * Buscar categorias relacionadas a produtos mais vendidos
-   */
   async getMostPopularCategories(limit: number = 10): Promise<any[]> {
     const session: Session = this.neo4jDriver.session();
 
@@ -218,7 +188,6 @@ export class CategoryRepository {
         valor_total: record.get('valor_total').toNumber(),
       }));
     } catch {
-      // TODO: Usar logger do Fastify ao invés de console
       return [];
     } finally {
       await session.close();

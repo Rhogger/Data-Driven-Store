@@ -1,5 +1,5 @@
 export const authSchemas = {
-  login: {
+  login: () => ({
     summary: 'Realizar login do usuário',
     description:
       'Autentica um usuário no sistema usando seu email. Retorna os dados do cliente se encontrado.',
@@ -17,6 +17,7 @@ export const authSchemas = {
     },
     response: {
       200: {
+        description: 'Login realizado com sucesso',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -42,7 +43,16 @@ export const authSchemas = {
           },
         },
       },
+      400: {
+        description: 'Erro de validação',
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: { type: 'string' },
+        },
+      },
       404: {
+        description: 'Usuário não encontrado',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -50,24 +60,17 @@ export const authSchemas = {
           action: { type: 'string' },
         },
       },
-      400: {
-        type: 'object',
-        properties: {
-          success: { type: 'boolean' },
-          error: { type: 'string' },
-        },
-      },
     },
-  },
+  }),
 
-  register: {
+  register: () => ({
     summary: 'Cadastrar novo cliente',
     description:
-      'Registra um novo cliente no sistema. Valida CPF e dados obrigatórios antes de criar a conta.',
+      'Registra um novo cliente no sistema. Valida CPF e dados obrigatórios antes de criar a conta. As preferências devem ser informadas como um array de IDs de categorias, são obrigatórias e deve ser inserida pela menos 5.',
     tags: ['Auth'],
     body: {
       type: 'object',
-      required: ['nome', 'email', 'cpf', 'telefone'],
+      required: ['nome', 'email', 'cpf', 'telefone', 'preferencias'],
       properties: {
         nome: {
           type: 'string',
@@ -87,10 +90,19 @@ export const authSchemas = {
           type: 'string',
           description: 'Telefone do cliente (10-11 dígitos)',
         },
+        preferencias: {
+          type: 'array',
+          minItems: 5,
+          items: { type: 'integer', minimum: 1 },
+          description:
+            'Array de IDs de categorias preferidas do cliente. Obrigatório informar pelo menos 5 categorias. Cada valor deve ser um inteiro positivo.',
+        },
       },
+      additionalProperties: false,
     },
     response: {
       201: {
+        description: 'Cliente cadastrado com sucesso',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -114,6 +126,7 @@ export const authSchemas = {
         },
       },
       400: {
+        description: 'Erro de validação',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -121,6 +134,7 @@ export const authSchemas = {
         },
       },
       409: {
+        description: 'Conflito de dados (email ou CPF já cadastrado)',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -128,5 +142,5 @@ export const authSchemas = {
         },
       },
     },
-  },
+  }),
 };
