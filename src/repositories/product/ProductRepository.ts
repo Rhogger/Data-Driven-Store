@@ -6,7 +6,6 @@ import {
   Product,
   CreateProductInput,
   UpdateProductInput,
-  ProductCacheData,
   ProductViewData,
 } from './ProductInterfaces';
 
@@ -64,18 +63,19 @@ export class ProductRepository {
     // Tentar buscar no cache primeiro
     const cached = await this.getFromCache(id);
     if (cached) {
-      return this.normalizeProduct(cached);
+      return cached; // O cache já armazena o objeto normalizado
     }
 
     // Buscar no MongoDB
-    const product = (await this.mongoCollection.findOne({
+    const productFromDb = (await this.mongoCollection.findOne({
       _id: new ObjectId(id),
     })) as any;
 
-    if (product) {
-      // Salvar no cache
-      await this.saveToCache(product as Product);
-      return this.normalizeProduct(product);
+    if (productFromDb) {
+      const normalizedProduct = this.normalizeProduct(productFromDb); // Normaliza o produto do DB
+      // Salvar a versão normalizada e completa no cache
+      await this.saveToCache(normalizedProduct);
+      return normalizedProduct;
     }
 
     return null;
@@ -108,13 +108,7 @@ export class ProductRepository {
   async findAll(limit = 20, skip = 0): Promise<Product[]> {
     const products = await this.mongoCollection.find({}).skip(skip).limit(limit).toArray();
 
-    // Garantir que todos os produtos tenham os campos obrigatórios
-    return products.map((product: any) => ({
-      ...product,
-      id_produto: product._id?.toString(), // Mapear para id_produto
-      reservado: product.reservado ?? 0,
-      disponivel: product.disponivel ?? (product.estoque || 0),
-    })) as Product[];
+    return products.map((product: any) => this.normalizeProduct(product));
   }
 
   /**
@@ -123,13 +117,7 @@ export class ProductRepository {
   async findLowStock(limiar: number): Promise<any[]> {
     const products = await this.mongoCollection.find({ estoque: { $lt: limiar } }).toArray();
 
-    // Mapear _id para id_produto e garantir campos obrigatórios
-    return products.map((product: any) => ({
-      ...product,
-      id_produto: product._id?.toString(),
-      reservado: product.reservado ?? 0,
-      disponivel: product.disponivel ?? (product.estoque || 0),
-    }));
+    return products.map((product: any) => this.normalizeProduct(product));
   }
 
   /**
@@ -225,6 +213,69 @@ export class ProductRepository {
     return products.map((product: any) => this.normalizeProduct(product));
   }
 
+  /**
+   * Adiciona um novo campo a todos os produtos de uma categoria específica.
+   * @param categoryId - O ID da categoria (do PostgreSQL).
+   * @param fieldName - O nome do campo a ser adicionado.
+   * @param fieldValue - O valor do campo a ser adicionado.
+   * @returns O número de produtos atualizados.
+   */
+  async addFieldToProductsByCategory(
+    categoryId: number,
+    fieldName: string,
+    fieldValue: any,
+  ): Promise<Product[]> {
+    const filter = { categorias: categoryId };
+    const update = {
+      $set: {
+        [fieldName]: fieldValue,
+        updated_at: new Date(),
+      },
+    };
+
+    const result = await this.mongoCollection.updateMany(filter, update);
+
+    if (result.modifiedCount === 0) {
+      return [];
+    }
+
+    // Após a atualização, buscar os documentos modificados para retorná-los
+    const updatedDocs = await this.mongoCollection.find(filter).toArray();
+
+    // Invalidar o cache para cada produto atualizado
+    const invalidationPromises = updatedDocs.map((doc) => this.invalidateCache(doc._id.toString()));
+    await Promise.all(invalidationPromises);
+
+    return updatedDocs.map((doc: any) => this.normalizeProduct(doc));
+  }
+
+  // ===== HELPER METHODS =====
+
+  /**
+   * Normaliza o produto para o formato do schema (id_produto, campos calculados, etc.)
+   */
+  private normalizeProduct(product: any): Product {
+    const estoque = product.estoque ?? 0;
+    const reservado = product.reservado ?? 0;
+    const id_string = product._id?.toString();
+
+    // Cria uma cópia e remove o _id original (que é um ObjectId) para evitar conflitos
+    const restOfProduct = { ...product };
+    delete restOfProduct._id;
+
+    return {
+      ...restOfProduct,
+      _id: id_string, // Garante que _id seja uma string para conformidade com o schema
+      id_produto: id_string, // Garante que id_produto também seja a string
+      estoque: estoque,
+      reservado: reservado,
+      disponivel: estoque - reservado,
+      categorias: Array.isArray(product.categorias) ? product.categorias : [],
+      atributos: product.atributos || {},
+      avaliacoes: product.avaliacoes || [],
+    };
+  }
+
   // ===== NEO4J OPERATIONS =====
 
   /**
@@ -278,7 +329,7 @@ export class ProductRepository {
   /**
    * Buscar produto do cache
    */
-  private async getFromCache(id: string): Promise<ProductCacheData | null> {
+  private async getFromCache(id: string): Promise<Product | null> {
     const cacheKey = `produto:${id}`;
     const cached = await this.redis.get(cacheKey);
 
@@ -287,7 +338,8 @@ export class ProductRepository {
     try {
       // Refresh TTL no acesso
       await this.redis.expire(cacheKey, this.PRODUCT_CACHE_TTL);
-      return JSON.parse(cached) as ProductCacheData;
+      // O cache agora armazena o objeto Product completo.
+      return JSON.parse(cached) as Product;
     } catch {
       await this.redis.del(cacheKey);
       return null;
@@ -298,19 +350,15 @@ export class ProductRepository {
    * Salvar produto no cache
    */
   private async saveToCache(product: Product): Promise<void> {
-    const cacheData: ProductCacheData = {
-      id_produto: product._id?.toString() || product.id || '',
-      nome: product.nome,
-      descricao: product.descricao,
-      preco: product.preco,
-      marca: product.marca,
-      id_categoria: 1, // TODO: mapear categoria string para ID
-      atributos: product.atributos || {},
-      avaliacoes: product.avaliacoes || [],
-    };
+    const productId = product.id_produto || product._id?.toString();
+    if (!productId) {
+      this.fastify.log.warn({ product }, 'Tentativa de salvar produto no cache sem um ID válido.');
+      return;
+    }
 
-    const cacheKey = `produto:${cacheData.id_produto}`;
-    await this.redis.setex(cacheKey, this.PRODUCT_CACHE_TTL, JSON.stringify(cacheData));
+    const cacheKey = `produto:${productId}`;
+    // Salva o objeto Product completo, preservando todos os campos dinâmicos.
+    await this.redis.setex(cacheKey, this.PRODUCT_CACHE_TTL, JSON.stringify(product));
   }
 
   /**
@@ -318,33 +366,6 @@ export class ProductRepository {
    */
   private async invalidateCache(id: string): Promise<void> {
     await this.redis.del(`produto:${id}`);
-  }
-
-  /**
-   * Normaliza o produto para o formato do schema (id_produto, campos obrigatórios)
-   */
-  private normalizeProduct(product: any): Product {
-    return {
-      ...product,
-      id_produto: product.id_produto || product._id?.toString() || product.id || '',
-      _id: product._id?.toString?.() || undefined,
-      reservado: product.reservado ?? 0,
-      disponivel: product.disponivel ?? (product.estoque || 0),
-      categorias: Array.isArray(product.categorias)
-        ? product.categorias
-        : product.categorias
-          ? [product.categorias]
-          : [],
-      atributos: product.atributos || {},
-      avaliacoes: product.avaliacoes || {},
-    };
-  }
-
-  /**
-   * Converter cache para produto
-   */
-  private cacheToProduct(cached: ProductCacheData): Product {
-    return this.normalizeProduct(cached);
   }
 
   // ===== PRODUCT VIEWS OPERATIONS =====

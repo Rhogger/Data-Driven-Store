@@ -41,6 +41,7 @@ const paginatedResponse = (itemSchema: any) => ({
 // Schema base do produto
 const productSchema = {
   type: 'object',
+  additionalProperties: true, // Permitir campos dinâmicos como 'em_promocao'
   properties: {
     _id: { type: 'string', description: 'ID único do produto' },
     id_produto: { type: 'string', description: 'ID único do produto (mapeado de _id)' },
@@ -304,6 +305,57 @@ export const productSchemas = {
     response: {
       200: paginatedResponse(productSchema),
       400: errorResponse(),
+      500: errorResponse(),
+    },
+  }),
+
+  addFieldByCategory: () => ({
+    tags: ['Products', 'Bulk Operations'],
+    summary: 'Adicionar/Atualizar campo em produtos de uma categoria (PUT)',
+    description:
+      'Adiciona ou atualiza um campo com um valor específico para todos os produtos de uma categoria. Retorna a lista de produtos que foram modificados. Esta é uma operação em massa e pode afetar múltiplos documentos. Campos protegidos como _id, estoque, etc., não podem ser alterados.',
+    params: {
+      type: 'object',
+      required: ['categoryId'],
+      properties: {
+        categoryId: {
+          type: 'string',
+          pattern: '^[1-9][0-9]*$',
+          description: 'ID da categoria (do PostgreSQL) cujos produtos serão atualizados.',
+        },
+      },
+    },
+    body: {
+      type: 'object',
+      required: ['field_name', 'field_value'],
+      properties: {
+        field_name: {
+          type: 'string',
+          description: 'O nome do campo a ser adicionado/atualizado. Ex: "promocao_ativa"',
+        },
+        field_value: {
+          description:
+            'O valor a ser atribuído ao campo. Pode ser qualquer tipo JSON válido (string, number, boolean, object, array). Ex: true',
+        },
+      },
+      additionalProperties: false,
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', default: true },
+          updated_count: { type: 'integer', description: 'Número de produtos atualizados' },
+          data: {
+            type: 'array',
+            items: productSchema,
+            description: 'Lista dos produtos que foram atualizados',
+          },
+        },
+        required: ['success', 'updated_count', 'data'],
+      },
+      400: errorResponse(),
+      404: errorResponse(),
       500: errorResponse(),
     },
   }),

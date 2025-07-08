@@ -38,18 +38,6 @@ export interface UpdateProductInput {
   atributos?: Record<string, any>;
   avaliacoes?: Array<Record<string, any>>;
 }
-
-export interface ProductCacheData {
-  id_produto: string;
-  nome: string;
-  descricao: string;
-  preco: number;
-  marca: string;
-  id_categoria: number;
-  atributos: Record<string, any>;
-  avaliacoes: Array<Record<string, any>>;
-}
-
 export interface ProductViewData {
   id_produto: string;
   visualizacoes: number;
