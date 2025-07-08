@@ -38,6 +38,18 @@ const paginatedResponse = (itemSchema: any) => ({
   required: ['success', 'data', 'pagination'],
 });
 
+// Schema para uma única avaliação
+const reviewSchema = {
+  type: 'object',
+  properties: {
+    id_cliente: { type: 'integer', description: 'ID do cliente que fez a avaliação' },
+    nota: { type: 'number', minimum: 1, maximum: 5, description: 'Nota da avaliação (1 a 5)' },
+    comentario: { type: 'string', description: 'Comentário da avaliação' },
+    data_avaliacao: { type: 'string', format: 'date-time', description: 'Data da avaliação' },
+  },
+  required: ['id_cliente', 'nota', 'data_avaliacao'],
+};
+
 // Schema base do produto
 const productSchema = {
   type: 'object',
@@ -353,6 +365,55 @@ export const productSchemas = {
           },
         },
         required: ['success', 'updated_count', 'data'],
+      },
+      400: errorResponse(),
+      404: errorResponse(),
+      500: errorResponse(),
+    },
+  }),
+
+  listReviews: () => ({
+    tags: ['Products', 'Reviews'],
+    summary: 'Listar avaliações de um produto',
+    description:
+      'Lista todas as avaliações de um produto específico, ordenadas por data (mais recentes primeiro) e com paginação.',
+    params: idParamSchema,
+    querystring: {
+      type: 'object',
+      properties: {
+        page: {
+          type: 'string',
+          pattern: '^[1-9][0-9]*$',
+          default: '1',
+          description: 'Número da página',
+        },
+        pageSize: {
+          type: 'string',
+          pattern: '^[1-9][0-9]*$',
+          default: '10',
+          description: 'Itens por página (máximo: 50)',
+        },
+      },
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', default: true },
+          data: { type: 'array', items: reviewSchema },
+          pagination: {
+            type: 'object',
+            properties: {
+              page: { type: 'integer', minimum: 1 },
+              pageSize: { type: 'integer', minimum: 0 },
+              totalItems: { type: 'integer', minimum: 0 },
+              totalPages: { type: 'integer', minimum: 0 },
+              hasMore: { type: 'boolean' },
+            },
+            required: ['page', 'pageSize', 'totalItems', 'totalPages', 'hasMore'],
+          },
+        },
+        required: ['success', 'data', 'pagination'],
       },
       400: errorResponse(),
       404: errorResponse(),

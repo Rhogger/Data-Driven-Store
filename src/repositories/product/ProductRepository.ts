@@ -249,6 +249,56 @@ export class ProductRepository {
     return updatedDocs.map((doc: any) => this.normalizeProduct(doc));
   }
 
+  /**
+   * Listar as avaliações de um produto com ordenação e paginação.
+   * @param productId - O ID do produto.
+   * @param page - A página a ser retornada.
+   * @param pageSize - O número de avaliações por página.
+   * @returns Um objeto com as avaliações e o total, ou null se o produto não for encontrado.
+   */
+  async getProductReviews(
+    productId: string,
+    page: number,
+    pageSize: number,
+  ): Promise<{ reviews: any[]; total: number } | null> {
+    const skip = (page - 1) * pageSize;
+
+    const pipeline = [
+      // 1. Encontrar o produto pelo ID
+      { $match: { _id: new ObjectId(productId) } },
+
+      // 2. Projetar os campos necessários de forma eficiente
+      {
+        $project: {
+          _id: 0,
+          total: { $size: { $ifNull: ['$avaliacoes', []] } }, // Contar o total de avaliações
+          reviews: {
+            // Ordenar e paginar o subarray de avaliações
+            $slice: [
+              {
+                // Ordenar o array de avaliações (requer MongoDB 5.2+)
+                $sortArray: {
+                  input: { $ifNull: ['$avaliacoes', []] },
+                  sortBy: { data_avaliacao: -1 }, // -1 para decrescente (mais recentes primeiro)
+                },
+              },
+              skip,
+              pageSize,
+            ],
+          },
+        },
+      },
+    ];
+
+    // Tipamos o resultado da agregação para que o TypeScript entenda a estrutura do documento retornado.
+    const result = await this.mongoCollection
+      .aggregate<{ reviews: any[]; total: number }>(pipeline)
+      .toArray();
+
+    // Se o aggregate não retornar nada, o produto não existe.
+    return result.length > 0 ? result[0] : null;
+  }
+
   // ===== HELPER METHODS =====
 
   /**

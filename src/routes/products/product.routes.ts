@@ -7,6 +7,7 @@ import lowStockProductsRoutes from '@routes/products/endpoints/low_stock_product
 import averagePriceByBrandRoutes from '@routes/products/endpoints/average_price_by_brand.routes';
 import searchProductsRoutes from '@routes/products/endpoints/search_products.routes';
 import addFieldByCategoryRoutes from '@routes/products/endpoints/add_field_by_category.routes';
+import listProductReviewsRoutes from '@routes/products/endpoints/list_product_reviews.routes';
 import { productRankingSchemas } from './schema/product-ranking.schemas';
 import {
   getProductRankingHandler,
@@ -22,6 +23,7 @@ const productRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(averagePriceByBrandRoutes);
   await fastify.register(searchProductsRoutes);
   await fastify.register(addFieldByCategoryRoutes);
+  await fastify.register(listProductReviewsRoutes);
 
   // Ranking de produtos
   fastify.get('/products/ranking', {
