@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
-import { OrderRepository } from '@/repositories/order/OrderRepository';
-import { reportSchemas } from '../schema/report.schemas';
+import { OrderRepository } from '@repositories/order/OrderRepository';
+import { reportSchemas } from '@routes/reports/schema/report.schemas';
 
 const billingByCategoryReportRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/reports/billing-by-category', {

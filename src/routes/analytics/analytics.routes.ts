@@ -1,38 +1,21 @@
 import { FastifyInstance } from 'fastify';
-import { cassandraAnalyticsSchemas } from '@routes/analytics/schema/cassandra-analytics.schemas';
-import { getConversionFunnelHandler } from '@routes/analytics/endpoints/conversion-funnel.routes';
-import { getWeeklyViewsHandler } from '@routes/analytics/endpoints/weekly-views.routes';
-import { getTopSearchTermsHandler } from '@routes/analytics/endpoints/top-search-terms.routes';
-import { getCampaignCTRHandler } from '@routes/analytics/endpoints/campaign-ctr.routes';
-import { getUsersByUtmSourceHandler } from '@routes/analytics/endpoints/users-by-utm.routes';
+import getConversionFunnelRoute from '@routes/analytics/endpoints/conversion_funnel.routes';
+import getWeeklyViewsRoute from '@routes/analytics/endpoints/weekly_views.routes';
+import getTopSearchTermsRoute from '@routes/analytics/endpoints/top_search_terms.routes';
+import getCampaignCTRRoute from '@routes/analytics/endpoints/campaign_ctr.routes';
+import getUsersByUtmSourceRoute from '@routes/analytics/endpoints/users_by_utm.routes';
 
 export default async function analyticsRoutes(fastify: FastifyInstance) {
-  fastify.addHook('onRequest', async (request, _reply) => {
-    await request.jwtVerify();
+  fastify.addHook('onRequest', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch {
+      return reply.status(401).send({ success: false, message: 'Token inválido ou ausente.' });
+    }
   });
-
-  fastify.get('/analytics/conversion-funnel', {
-    schema: cassandraAnalyticsSchemas.getConversionFunnel(),
-    handler: getConversionFunnelHandler,
-  });
-
-  fastify.get('/analytics/weekly-views', {
-    schema: cassandraAnalyticsSchemas.getWeeklyViews(),
-    handler: getWeeklyViewsHandler,
-  });
-
-  fastify.get('/analytics/top-search-terms', {
-    schema: cassandraAnalyticsSchemas.getTopSearchTerms(),
-    handler: getTopSearchTermsHandler,
-  });
-
-  fastify.get('/analytics/campaign-ctr/:origemCampanha', {
-    schema: cassandraAnalyticsSchemas.getCampaignCTR(),
-    handler: getCampaignCTRHandler,
-  });
-
-  fastify.get('/analytics/users-by-utm/:utmSource', {
-    schema: cassandraAnalyticsSchemas.getUsersByUtmSource(),
-    handler: getUsersByUtmSourceHandler,
-  });
+  await fastify.register(getConversionFunnelRoute);
+  await fastify.register(getWeeklyViewsRoute);
+  await fastify.register(getTopSearchTermsRoute);
+  await fastify.register(getCampaignCTRRoute);
+  await fastify.register(getUsersByUtmSourceRoute);
 }

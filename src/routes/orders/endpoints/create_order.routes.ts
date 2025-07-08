@@ -19,6 +19,7 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
     Body: CreateOrderInput;
   }>('/orders', {
     schema: orderSchemas.create(),
+    preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       const { id_cliente, id_endereco, itens } = request.body;
 
@@ -31,19 +32,16 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
       const addressRepository = new AddressRepository(fastify);
 
       try {
-        // --- ETAPA 0: Validação de Endereço ---
         const address = await addressRepository.findById(id_endereco);
         if (!address) {
           throw new Error(`Endereço com ID ${id_endereco} não encontrado.`);
         }
 
-        // Verificar se o endereço pertence ao cliente
         const belongsToClient = await addressRepository.belongsToClient(id_endereco, id_cliente);
         if (!belongsToClient) {
           throw new Error('O endereço não pertence ao cliente informado.');
         }
 
-        // --- ETAPA 1: Validação e Coleta de Dados (MongoDB) ---
         let totalValue = 0;
         const orderItemsForPg: OrderItemInput[] = [];
         const stockUpdates: Array<{ id: string; newStock: number }> = [];
@@ -55,7 +53,6 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
             throw new Error(`Produto com ID ${item.id_produto} não encontrado.`);
           }
 
-          // Verificar se o produto tem estoque definido
           if (product.estoque === undefined || product.estoque === null) {
             throw new Error(`Produto "${product.nome}" não possui estoque definido.`);
           }
@@ -64,7 +61,6 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
             throw new Error(`Estoque insuficiente para o produto "${product.nome}".`);
           }
 
-          // Verificar se o produto tem categorias
           if (!product.categorias || product.categorias.length === 0) {
             throw new Error(`Produto "${product.nome}" não possui categorias definidas.`);
           }
@@ -74,7 +70,7 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
 
           orderItemsForPg.push({
             id_produto: item.id_produto,
-            id_categoria: product.categorias[0], // Usa a primeira categoria
+            id_categoria: product.categorias[0],
             preco_unitario: product.preco,
             quantidade: item.quantidade,
             subtotal: subtotal,
@@ -86,7 +82,6 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        // --- ETAPA 2: Transação Atômica (PostgreSQL) ---
         const createdOrder = await orderRepository.create({
           id_cliente,
           id_endereco,
@@ -95,7 +90,6 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
           itens: orderItemsForPg,
         });
 
-        // --- ETAPA 3: Atualização de Estoque (MongoDB) ---
         await Promise.all(
           stockUpdates.map((update) =>
             productRepository.update(update.id, { estoque: update.newStock }),

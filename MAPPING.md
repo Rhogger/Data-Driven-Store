@@ -1,25 +1,21 @@
-# Auth
-
-```
-[] Cadastrar-se:
-  - [] Criar cliente no postgres;
-  - [] Criar preferências no mongodb (exigir as preferências no body da requisição e sugerir no swagger fazer o get de categorias primeiro, pois as preferências são array de categoria);
-  - [] Criar cliente no neo4j;
-  - [] Retornar dados do cliente criado.
-
-[] Logar:
-  - [] Criar sessao no redis.
-```
-
 ## To Do:
 
 ```
-[] Criar middleware para autenticação, sempre que for executar um endpoint, deve verificar se o usuário possui sessao no redis;
-
-[] No cadastro, coletar as preferencias, sendo os ids de categorias.
+[X] Criar middleware para autenticação, sempre que for executar um endpoint, deve verificar se o usuário possui sessao no redis;
 ```
 
----
+# Auth
+
+```
+[X] Cadastrar-se:
+  - [X] Criar cliente no postgres;
+  - [X] Criar preferências no mongodb (exigir as preferências no body da requisição e sugerir no swagger fazer o get de categorias primeiro, pois as preferências são array de categoria);
+  - [X] Criar cliente no neo4j;
+  - [X] Retornar dados do cliente criado.
+
+[X] Logar:
+  - [X] Criar sessao no redis.
+```
 
 # Cliente
 
@@ -28,10 +24,27 @@
   - [] Update de dados do cliente no postgres;
   - [] Retornar dados atualizados.
 
-[] Adicionar endereço:
-  - [] Inserir novo endereço no postgres;
-  - [] Vincular endereço ao cliente;
-  - [] Retornar confirmação.
+[X] Adicionar endereço:
+  - [X] Inserir novo endereço no postgres;
+  - [X] Vincular endereço ao cliente;
+  - [X] Retornar confirmação.
+
+[X] Listar endereços:
+  - [X] Buscar todos os endereços no postgres;
+  - [X] Retornar lista de endereços.
+
+[X] Buscar endereço por ID:
+  - [X] Buscar o endereço por id no postgres;
+  - [X] Retornar endereço.
+
+[X] Alterar endereço:
+  - [X] Buscar o endereço por id no postgres;
+  - [X] Aplicar as mudanças;
+  - [X] Retornar o endereço.
+
+[X] Excluir endereço:
+  - [X] Buscar o endereço por id no postgres;
+  - [X] Excluir o endereço.
 
 [] Buscar cidades:
   - [] Consultar cidades do postgres;
@@ -53,40 +66,40 @@
 # Categoria
 
 ```
-[] Criar categoria:
-  - [] Criar categoria no postgres;
-  - [] Criar categoria no neo4j.
+[X] Criar categoria:
+  - [X] Criar categoria no postgres;
+  - [X] Criar categoria no neo4j.
 
-[] Buscar categorias (listagem):
-  - [] Buscar todas as categorias do postgres (sem paginação);
-  - [] Retornar lista de categorias.
+[X] Buscar categorias (listagem):
+  - [X] Buscar todas as categorias do postgres (sem paginação);
+  - [X] Retornar lista de categorias.
 
-[] Buscar categoria por ID:
-  - [] Buscar categoria específica no postgres;
-  - [] Retornar dados da categoria.
+[X] Buscar categoria por ID:
+  - [X] Buscar categoria específica no postgres;
+  - [X] Retornar dados da categoria.
 ```
 
 # Produto
 
 ```
-[] Criar produto:
-  - [] Criar produto no mongodb;
-  - [] Criar produto no neo4j;
-  - [] Criar marca do produto no neo4j (se não existir);
-  - [] Criar categorias do produto no neo4j (se não existir).
+[X] Criar produto:
+  - [X] Criar produto no mongodb;
+  - [X] Criar produto no neo4j;
+  - [X] Criar marca do produto no neo4j (se não existir);
+  - [X] Criar categorias do produto no neo4j (se não existir).
 
 [] Buscar produto por ID:
-  - [] Buscar produto do mongodb (se não tiver em cache);
-  - [] Criar relação de cliente visualizou o produto no neo4j;
+  - [X] Buscar produto do mongodb (se não tiver em cache);
+  - [X] Criar relação de cliente visualizou o produto no neo4j;
   - [] Registrar evento de visualização no cassandra (eventos_por_data);
   - [] Atualizar funil de conversão no cassandra (visualizou = true);
   - [] Incrementar contador de visualizações diárias no cassandra;
-  - [] Criar o cache de produto no redis;
-  - [] Atualizar ranking no redis.
+  - [X] Criar o cache de produto no redis;
+  - [X] Atualizar ranking no redis.
 
-[] Buscar produtos (listagem):
-  - [] Buscar produtos do mongodb (remover paginação);
-  - [] Retornar lista de produtos.
+[X] Buscar produtos (listagem):
+  - [X] Buscar produtos do mongodb (remover paginação);
+  - [X] Retornar lista de produtos.
 
 [] Buscar produtos por termo:
   - [] Buscar produtos do mongodb por termo;
@@ -104,7 +117,7 @@
   - [] Remover produto do cache no redis.
 
 [] Alterar produto:
-  - [] Alterar produto no mongodb;
+  - [X] Alterar produto no mongodb;
   - [] Recriar o produto no redis (se existir).
 
 [] Avaliar produto:
@@ -115,24 +128,30 @@
   - [] Recriar produto no redis.
 
 [] Adicionar produto no carrinho:
-  - [] Criar carrinho no redis (se não existir);
-  - [] Adicionar produto no carrinho (se não existir) no redis;
-  - [] Incrementar quantidade (se o produto já estiver no carrinho e a quantidade nova for maior que zero e a quantidade atual) no redis;
+  - [X] Criar carrinho no redis (se não existir);
+  - [X] Adicionar produto no carrinho (se não existir) no redis;
+  - [X] Incrementar quantidade (se o produto já estiver no carrinho e a quantidade nova for maior que zero e a quantidade atual) no redis;
   - [] Registrar evento de adicionar ao carrinho no cassandra (eventos_por_data);
   - [] Atualizar funil de conversão no cassandra (adicionou_carrinho = true).
 
 [] Remover produto do carrinho:
-  - [] Remover carrinho no redis (se não tiver produto);
-  - [] Remover produto no carrinho (se existir) no redis;
-  - [] Decrementar quantidade (se o produto já estiver no carrinho e quantidade nova for maior que zero e menor que a atual) no redis.
+  - [X] Remover carrinho no redis (se não tiver produto);
+  - [X] Remover produto no carrinho (se existir) no redis;
+  - [X] Decrementar quantidade (se o produto já estiver no carrinho e quantidade nova for maior que zero e menor que a atual) no redis.
+  - [] Registrar evento de remover do carrinho no cassandra (eventos_por_data);
 
-[] Limpar carrinho:
-  - [] Apagar o carrinho inteiro no redis.
+[X] Limpar carrinho:
+  - [X] Apagar o carrinho inteiro no redis.
 
-[] Buscar o carrinho e todos seus produtos:
-  - [] Buscar carrinho no redis;
-  - [] Buscar dados dos produtos no mongodb;
-  - [] Retornar carrinho com produtos completos.
+[X] Buscar o carrinho e todos seus produtos:
+  - [X] Buscar carrinho no redis;
+  - [X] Buscar dados dos produtos no mongodb;
+  - [X] Retornar carrinho com produtos completos.
+
+[X] Buscar o carrinho por id_cliente e todos seus produtos:
+  - [X] Buscar carrinho por id_cliente no redis;
+  - [X] Buscar dados dos produtos no mongodb;
+  - [X] Retornar carrinho com produtos completos.
 
 [] Comprar produto (finalizar pedido):
   - [] Adicionar relação de cliente comprou no neo4j;

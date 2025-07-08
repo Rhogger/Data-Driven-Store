@@ -56,6 +56,7 @@ const createCategoryBodySchema = {
 export const categorySchemas = {
   create: () => ({
     tags: ['Categories'],
+    security: [{ bearerAuth: [] }],
     summary: 'Criar categoria',
     description: 'Cria uma nova categoria no sistema',
     body: createCategoryBodySchema,
@@ -68,6 +69,7 @@ export const categorySchemas = {
 
   getById: () => ({
     tags: ['Categories'],
+    security: [{ bearerAuth: [] }],
     summary: 'Buscar categoria por ID',
     description: 'Busca uma categoria específica pelo seu ID',
     params: idParamSchema,
@@ -81,6 +83,7 @@ export const categorySchemas = {
 
   list: () => ({
     tags: ['Categories'],
+    security: [{ bearerAuth: [] }],
     summary: 'Listar categorias',
     description: 'Lista todas as categorias disponíveis',
     response: {
