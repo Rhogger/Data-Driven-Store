@@ -28,11 +28,12 @@ app.register(import('@fastify/swagger'), {
     ],
     tags: [
       { name: 'Health Check', description: 'Endpoints de verificação de saúde' },
+      { name: 'Database Tests', description: 'Endpoints para testar conexões com bancos de dados' },
+      { name: 'Auth', description: 'Autenticação e autorização de usuários' },
+      { name: 'Addresses', description: 'Gerenciamento de endereços de clientes' },
       { name: 'Categories', description: 'Operações relacionadas a categorias' },
       { name: 'Products', description: 'Operações relacionadas a produtos' },
       { name: 'Orders', description: 'Operações relacionadas a pedidos' },
-      { name: 'Reports', description: 'Relatórios e análises' },
-      { name: 'Database Tests', description: 'Endpoints para testar conexões com bancos de dados' },
       {
         name: 'Product Recommendations',
         description: 'Endpoints para recomendações de produtos',
@@ -41,6 +42,7 @@ app.register(import('@fastify/swagger'), {
         name: 'Customer Recommendations',
         description: 'Endpoints para recomendações de clientes',
       },
+      { name: 'Reports', description: 'Relatórios e análises de dados' },
     ],
   },
 });

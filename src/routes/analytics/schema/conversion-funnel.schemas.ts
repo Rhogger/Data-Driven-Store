@@ -1,9 +1,9 @@
 export const conversionFunnelSchemas = {
   getConversionFunnelStats: () => ({
-    tags: ['Analytics'],
+    tags: ['Reports'],
     summary: 'Estatísticas gerais do funil de conversão',
     description:
-      'Retorna estatísticas agregadas do funil de conversão (visualizou -> adicionou ao carrinho -> comprou)',
+      'Retorna estatísticas agregadas do funil de conversão (visualizou -> adicionou ao carrinho -> comprou). Analisa efetividade das conversões.',
     response: {
       200: {
         type: 'object',
@@ -61,9 +61,10 @@ export const conversionFunnelSchemas = {
   }),
 
   getConversionFunnelByProduct: () => ({
-    tags: ['Analytics'],
+    tags: ['Reports'],
     summary: 'Funil de conversão por produto específico',
-    description: 'Retorna estatísticas do funil de conversão para um produto específico',
+    description:
+      'Retorna estatísticas do funil de conversão para um produto específico. Permite análise de performance individual de produtos.',
     params: {
       type: 'object',
       properties: {

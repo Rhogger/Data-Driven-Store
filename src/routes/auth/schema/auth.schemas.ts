@@ -1,6 +1,8 @@
 export const authSchemas = {
   login: {
-    description: 'Realizar login do usuário',
+    summary: 'Realizar login do usuário',
+    description:
+      'Autentica um usuário no sistema usando seu email. Retorna os dados do cliente se encontrado.',
     tags: ['Auth'],
     body: {
       type: 'object',
@@ -59,7 +61,9 @@ export const authSchemas = {
   },
 
   register: {
-    description: 'Cadastrar novo cliente',
+    summary: 'Cadastrar novo cliente',
+    description:
+      'Registra um novo cliente no sistema. Valida CPF e dados obrigatórios antes de criar a conta.',
     tags: ['Auth'],
     body: {
       type: 'object',

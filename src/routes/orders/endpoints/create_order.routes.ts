@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { OrderRepository } from '@repositories/order/OrderRepository';
 import { OrderItemInput } from '@repositories/order/OrderInterfaces';
 import { ProductRepository } from '@repositories/product/ProductRepository';
+import { AddressRepository } from '@repositories/address/AddressRepository';
 import { orderSchemas } from '@routes/orders/schema/order.schemas';
 
 interface CreateOrderInput {
@@ -19,7 +20,7 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
   }>('/orders', {
     schema: orderSchemas.create(),
     handler: async (request, reply) => {
-      const { id_cliente, itens } = request.body;
+      const { id_cliente, id_endereco, itens } = request.body;
 
       if (!itens || itens.length === 0) {
         return reply.status(400).send({ message: 'O pedido deve conter pelo menos um item.' });
@@ -27,8 +28,21 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
 
       const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
       const orderRepository = new OrderRepository(fastify);
+      const addressRepository = new AddressRepository(fastify);
 
       try {
+        // --- ETAPA 0: Validação de Endereço ---
+        const address = await addressRepository.findById(id_endereco);
+        if (!address) {
+          throw new Error(`Endereço com ID ${id_endereco} não encontrado.`);
+        }
+
+        // Verificar se o endereço pertence ao cliente
+        const belongsToClient = await addressRepository.belongsToClient(id_endereco, id_cliente);
+        if (!belongsToClient) {
+          throw new Error('O endereço não pertence ao cliente informado.');
+        }
+
         // --- ETAPA 1: Validação e Coleta de Dados (MongoDB) ---
         let totalValue = 0;
         const orderItemsForPg: OrderItemInput[] = [];
@@ -40,8 +54,19 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
           if (!product) {
             throw new Error(`Produto com ID ${item.id_produto} não encontrado.`);
           }
-          if (!product.estoque || product.estoque < item.quantidade) {
+
+          // Verificar se o produto tem estoque definido
+          if (product.estoque === undefined || product.estoque === null) {
+            throw new Error(`Produto "${product.nome}" não possui estoque definido.`);
+          }
+
+          if (product.estoque < item.quantidade) {
             throw new Error(`Estoque insuficiente para o produto "${product.nome}".`);
+          }
+
+          // Verificar se o produto tem categorias
+          if (!product.categorias || product.categorias.length === 0) {
+            throw new Error(`Produto "${product.nome}" não possui categorias definidas.`);
           }
 
           const subtotal = product.preco * item.quantidade;
@@ -49,6 +74,7 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
 
           orderItemsForPg.push({
             id_produto: item.id_produto,
+            id_categoria: product.categorias[0], // Usa a primeira categoria
             preco_unitario: product.preco,
             quantidade: item.quantidade,
             subtotal: subtotal,
@@ -63,6 +89,7 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
         // --- ETAPA 2: Transação Atômica (PostgreSQL) ---
         const createdOrder = await orderRepository.create({
           id_cliente,
+          id_endereco,
           valor_total: totalValue,
           status_pedido: 'Pendente',
           itens: orderItemsForPg,

@@ -8,6 +8,7 @@ import {
   OrderWithItems,
 } from './OrderInterfaces';
 import { ProductRepository } from '../product/ProductRepository';
+import { CategoryRepository } from '../category/CategoryRepository';
 
 export class OrderRepository {
   private pg: Pool;
@@ -26,13 +27,14 @@ export class OrderRepository {
 
       // 1. Inserir o pedido
       const orderQuery = `
-        INSERT INTO pedidos (id_cliente, valor_total, status_pedido, data_pedido)
-        VALUES ($1, $2, $3, NOW())
+        INSERT INTO pedidos (id_cliente, id_endereco, valor_total, status_pedido, data_pedido)
+        VALUES ($1, $2, $3, $4, NOW())
         RETURNING *
       `;
 
       const orderResult = await client.query<CreatedOrder>(orderQuery, [
         orderData.id_cliente,
+        orderData.id_endereco,
         orderData.valor_total,
         orderData.status_pedido,
       ]);
@@ -42,13 +44,14 @@ export class OrderRepository {
       // 2. Inserir os itens do pedido
       for (const item of orderData.itens) {
         const itemQuery = `
-          INSERT INTO itens_pedido (id_pedido, id_produto, quantidade, preco_unitario, subtotal)
-          VALUES ($1, $2, $3, $4, $5)
+          INSERT INTO itens_pedido (id_pedido, id_produto, id_categoria, quantidade, preco_unitario, subtotal)
+          VALUES ($1, $2, $3, $4, $5, $6)
         `;
 
         await client.query(itemQuery, [
           createdOrder.id_pedido,
           item.id_produto,
+          item.id_categoria,
           item.quantidade,
           item.preco_unitario,
           item.subtotal,
@@ -205,6 +208,7 @@ export class OrderRepository {
    */
   async getBillingByCategory(): Promise<any[]> {
     const productRepo = new ProductRepository(this.fastify, this.fastify.neo4j, this.fastify.redis);
+    const categoryRepo = new CategoryRepository(this.fastify);
 
     // 1. Buscar todos os itens de pedidos entregues/enviados
     const { rows: itens } = await this.pg.query(`
@@ -221,7 +225,11 @@ export class OrderRepository {
     const produtos = await productRepo.findAll();
     const produtosMap = new Map(produtos.map((p: any) => [String(p._id), p]));
 
-    // 3. Agrupar por mês e categoria
+    // 3. Buscar todas as categorias
+    const categorias = await categoryRepo.findAll();
+    const categoriasMap = new Map(categorias.map((c: any) => [c.id_categoria, c.nome]));
+
+    // 4. Agrupar por mês e categoria
     const resultado: Record<string, Record<string, number>> = {};
 
     for (const item of itens) {
@@ -229,15 +237,22 @@ export class OrderRepository {
       if (!produto) continue;
 
       const mes = item.data_pedido.toISOString().slice(0, 7); // YYYY-MM
-      const categoria = (produto as any).id_categoria?.toString() || 'Sem categoria';
+
+      // Como agora temos array de categorias, vamos usar a primeira categoria
+      const categorias_produto = (produto as any).categorias;
+      const id_categoria =
+        categorias_produto && categorias_produto.length > 0 ? categorias_produto[0] : null;
+      const nome_categoria = id_categoria
+        ? categoriasMap.get(id_categoria) || 'Categoria desconhecida'
+        : 'Sem categoria';
 
       if (!resultado[mes]) resultado[mes] = {};
-      if (!resultado[mes][categoria]) resultado[mes][categoria] = 0;
+      if (!resultado[mes][nome_categoria]) resultado[mes][nome_categoria] = 0;
 
-      resultado[mes][categoria] += Number(item.subtotal);
+      resultado[mes][nome_categoria] += Number(item.subtotal);
     }
 
-    // 4. Transformar em array para resposta
+    // 5. Transformar em array para resposta
     const resposta = [];
     for (const mes of Object.keys(resultado)) {
       for (const categoria of Object.keys(resultado[mes])) {

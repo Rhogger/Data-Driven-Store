@@ -36,12 +36,18 @@ export class ProductRepository {
   async create(product: CreateProductInput): Promise<Product> {
     const productData = {
       ...product,
+      reservado: 0, // Campo calculado
+      disponivel: product.estoque || 0, // estoque - reservado
       created_at: new Date(),
       updated_at: new Date(),
     };
 
     const result = await this.mongoCollection.insertOne(productData);
-    const createdProduct = { ...productData, _id: result.insertedId };
+    const createdProduct = {
+      ...productData,
+      _id: result.insertedId,
+      id_produto: result.insertedId.toString(), // Mapear para id_produto
+    };
 
     // Invalidar cache se existir
     if (result.insertedId) {
@@ -64,14 +70,19 @@ export class ProductRepository {
     // Buscar no MongoDB
     const product = (await this.mongoCollection.findOne({
       _id: new ObjectId(id),
-    })) as Product | null;
+    })) as any;
 
     if (product) {
+      // Garantir que tenha os campos obrigatórios
+      product.reservado = product.reservado ?? 0;
+      product.disponivel = product.disponivel ?? (product.estoque || 0);
+      product.id_produto = product._id?.toString(); // Mapear para id_produto
+
       // Salvar no cache
-      await this.saveToCache(product);
+      await this.saveToCache(product as Product);
     }
 
-    return product;
+    return product as Product | null;
   }
 
   /**
@@ -99,14 +110,30 @@ export class ProductRepository {
    * Listar produtos com paginação
    */
   async findAll(limit = 20, skip = 0): Promise<Product[]> {
-    return this.mongoCollection.find({}).skip(skip).limit(limit).toArray() as Promise<Product[]>;
+    const products = await this.mongoCollection.find({}).skip(skip).limit(limit).toArray();
+
+    // Garantir que todos os produtos tenham os campos obrigatórios
+    return products.map((product: any) => ({
+      ...product,
+      id_produto: product._id?.toString(), // Mapear para id_produto
+      reservado: product.reservado ?? 0,
+      disponivel: product.disponivel ?? (product.estoque || 0),
+    })) as Product[];
   }
 
   /**
    * Buscar produtos com estoque baixo
    */
-  async findLowStock(limiar: number): Promise<Product[]> {
-    return this.mongoCollection.find({ estoque: { $lt: limiar } }).toArray() as Promise<Product[]>;
+  async findLowStock(limiar: number): Promise<any[]> {
+    const products = await this.mongoCollection.find({ estoque: { $lt: limiar } }).toArray();
+
+    // Mapear _id para id_produto e garantir campos obrigatórios
+    return products.map((product: any) => ({
+      ...product,
+      id_produto: product._id?.toString(),
+      reservado: product.reservado ?? 0,
+      disponivel: product.disponivel ?? (product.estoque || 0),
+    }));
   }
 
   /**
@@ -230,7 +257,7 @@ export class ProductRepository {
       descricao: cached.descricao,
       preco: cached.preco,
       marca: cached.marca,
-      categoria: cached.id_categoria.toString(),
+      categorias: cached.id_categoria ? [cached.id_categoria] : [],
       atributos: cached.atributos,
       avaliacoes: cached.avaliacoes,
     };

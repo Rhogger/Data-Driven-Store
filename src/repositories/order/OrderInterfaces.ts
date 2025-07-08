@@ -2,6 +2,7 @@
 
 export interface OrderInput {
   id_cliente: number;
+  id_endereco?: number;
   valor_total: number;
   status_pedido: string;
   itens: OrderItemInput[];
@@ -9,6 +10,7 @@ export interface OrderInput {
 
 export interface OrderItemInput {
   id_produto: string;
+  id_categoria: number; // Primeira categoria do produto
   quantidade: number;
   preco_unitario: number;
   subtotal: number;
