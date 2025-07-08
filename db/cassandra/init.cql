@@ -1,4 +1,4 @@
-CREATE KEYSPACE IF NOT EXISTS datadriven WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+CREATE KEYSPACE IF NOT EXISTS datadriven_store WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 
 USE datadriven_store;
 

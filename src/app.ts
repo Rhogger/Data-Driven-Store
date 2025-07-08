@@ -32,15 +32,6 @@ app.register(import('@fastify/swagger'), {
         description: 'Servidor de desenvolvimento',
       },
     ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        },
-      },
-    },
     tags: [
       { name: 'Health Check', description: 'Endpoints de verificação de saúde' },
       { name: 'Database Tests', description: 'Endpoints para testar conexões com bancos de dados' },
@@ -60,13 +51,24 @@ app.register(import('@fastify/swagger'), {
       },
       { name: 'Reports', description: 'Relatórios e análises de dados' },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+      schemas: {},
+    },
+    security: [{ bearerAuth: [] }],
   },
 });
 
 app.register(import('@fastify/swagger-ui'), {
   routePrefix: '/docs',
   uiConfig: {
-    docExpansion: 'full',
+    docExpansion: 'none',
     deepLinking: false,
   },
   staticCSP: true,

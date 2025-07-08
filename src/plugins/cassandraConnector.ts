@@ -17,17 +17,6 @@ const cassandraConnector: FastifyPluginAsync = async (fastify: FastifyInstance) 
     fastify.log.info('Conectando ao Cassandra...');
     await cassandraClient.connect();
     fastify.log.info('Cassandra connected successfully');
-
-    const keyspace = process.env.CASSANDRA_KEYSPACE || 'datadriven_store';
-    fastify.log.info(`Verificando keyspace: ${keyspace}`);
-
-    const createKeyspaceQuery = `
-        CREATE KEYSPACE IF NOT EXISTS ${keyspace}
-        WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}
-      `;
-
-    await cassandraClient.execute(createKeyspaceQuery);
-    fastify.log.info(`Keyspace ${keyspace} verificado/criado com sucesso`);
   } catch (error: any) {
     fastify.log.error('Failed to connect to Cassandra:', error?.message || 'Unknown error');
     throw error;
@@ -42,4 +31,5 @@ const cassandraConnector: FastifyPluginAsync = async (fastify: FastifyInstance) 
 
 export default fp(cassandraConnector, {
   name: 'cassandra-connector',
+  fastify: '>=5.0.0',
 });
