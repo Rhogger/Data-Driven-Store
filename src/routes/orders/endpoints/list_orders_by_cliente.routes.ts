@@ -7,6 +7,7 @@ const listOrdersByCustomerRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { id_cliente: string };
   }>('/orders/by-customer/:id_cliente', {
     schema: orderSchemas.listByCliente(),
+    preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       const id_cliente = Number(request.params.id_cliente);
 

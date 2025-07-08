@@ -13,6 +13,7 @@ interface UsersByUtmQuery {
 const getUsersByUtmSourceRoute = async (fastify: FastifyInstance) => {
   fastify.get('/analytics/users-by-utm/:utmSource', {
     schema: cassandraAnalyticsSchemas.getUsersByUtmSource(),
+    preHandler: fastify.authenticate,
     handler: async (
       request: FastifyRequest<{ Params: UsersByUtmParams; Querystring: UsersByUtmQuery }>,
       reply: FastifyReply,

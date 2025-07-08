@@ -107,6 +107,7 @@ const listOrdersByClienteSchema = {
 export const orderSchemas = {
   create: () => ({
     tags: ['Orders'],
+    security: [{ bearerAuth: [] }],
     summary: 'Criar pedido',
     description:
       'Cria um novo pedido no sistema. Valida estoque dos produtos, cria o pedido no PostgreSQL e atualiza o estoque no MongoDB.',
@@ -119,6 +120,7 @@ export const orderSchemas = {
   }),
   listByCliente: () => ({
     tags: ['Orders'],
+    security: [{ bearerAuth: [] }],
     summary: 'Listar pedidos de um cliente',
     description: 'Lista todos os pedidos de um cliente, incluindo o valor total.',
     ...listOrdersByClienteSchema,

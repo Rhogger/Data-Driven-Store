@@ -5,6 +5,7 @@ import { SearchTermsAggregatedRepository } from '@/repositories/search-terms-agg
 const getTopSearchTermsRoute = async (fastify: FastifyInstance) => {
   fastify.get('/analytics/top-search-terms', {
     schema: cassandraAnalyticsSchemas.getTopSearchTerms(),
+    preHandler: fastify.authenticate,
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const cassandraClient = request.server.cassandra;

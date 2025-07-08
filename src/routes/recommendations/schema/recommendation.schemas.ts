@@ -1,6 +1,7 @@
 export const productRecommendationSchemas = {
   frequentlyBoughtTogether: () => ({
     tags: ['Product Recommendations'],
+    security: [{ bearerAuth: [] }],
     summary: 'Produtos frequentemente comprados juntos',
     description:
       'Filtragem colaborativa item-item: encontra produtos que são frequentemente comprados junto com um produto específico',
@@ -127,6 +128,7 @@ export const productRecommendationSchemas = {
 
   userBasedRecommendations: () => ({
     tags: ['Product Recommendations'],
+    security: [{ bearerAuth: [] }],
     summary: 'Recomendações baseadas em clientes similares',
     description:
       'Filtragem colaborativa user-user: encontra clientes com histórico similar e recomenda produtos que eles compraram',
@@ -285,6 +287,7 @@ export const productRecommendationSchemas = {
 
   shortestPath: () => ({
     tags: ['Product Recommendations'],
+    security: [{ bearerAuth: [] }],
     summary: 'Caminho mais curto entre produtos',
     description:
       'Encontra o caminho mais curto entre dois produtos através de suas categorias e marcas usando algoritmos de grafos',
@@ -443,6 +446,7 @@ export const productRecommendationSchemas = {
 
   influencerCustomers: () => ({
     tags: ['Product Recommendations'],
+    security: [{ bearerAuth: [] }],
     summary: 'Clientes influenciadores',
     description:
       'Identifica clientes cujas avaliações positivas se correlacionam com aumento nas vendas dos produtos avaliados',

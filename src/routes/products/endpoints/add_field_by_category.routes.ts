@@ -17,6 +17,7 @@ const addFieldByCategoryRoutes: FastifyPluginAsync = async (fastify) => {
     '/products/category/:categoryId/add-field',
     {
       schema: productSchemas.addFieldByCategory(),
+      preHandler: fastify.authenticate,
       handler: async (request, reply) => {
         try {
           const { categoryId } = request.params;

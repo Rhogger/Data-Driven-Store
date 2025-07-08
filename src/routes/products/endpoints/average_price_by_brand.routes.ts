@@ -5,6 +5,7 @@ import { productSchemas } from '@routes/products/schema/product.schemas';
 const averagePriceByBrandRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/products/reports/average-price-by-brand', {
     schema: productSchemas.getAveragePriceByBrand(),
+    preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       try {
         const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);

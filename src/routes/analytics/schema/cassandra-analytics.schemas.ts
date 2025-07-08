@@ -1,6 +1,7 @@
 export const cassandraAnalyticsSchemas = {
   getConversionFunnel: () => ({
     tags: ['Reports'],
+    security: [{ bearerAuth: [] }],
     summary: 'Consulta de funil de conversão',
     description:
       'Consulta estatísticas do funil de conversão (visualizou -> adicionou ao carrinho -> comprou). Analisa o comportamento dos usuários através do funil de vendas.',
@@ -39,6 +40,7 @@ export const cassandraAnalyticsSchemas = {
 
   getWeeklyViews: () => ({
     tags: ['Reports'],
+    security: [{ bearerAuth: [] }],
     summary: 'Visualizações por dia na última semana',
     description:
       'Calcula o número de eventos de "visualização" por dia nos últimos 7 dias. Permite análise de tendências de engajamento.',
@@ -74,6 +76,7 @@ export const cassandraAnalyticsSchemas = {
 
   getTopSearchTerms: () => ({
     tags: ['Reports'],
+    security: [{ bearerAuth: [] }],
     summary: 'Top 10 termos de busca mais utilizados',
     description:
       'Identifica os 10 termos de busca mais utilizados. Ajuda a entender o comportamento de busca dos usuários.',
@@ -106,6 +109,7 @@ export const cassandraAnalyticsSchemas = {
 
   getCampaignCTR: () => ({
     tags: ['Reports'],
+    security: [{ bearerAuth: [] }],
     summary: 'Taxa de cliques (CTR) de uma campanha',
     description:
       'Calcula a taxa de cliques de uma campanha específica. Permite medir a efetividade das campanhas de marketing.',
@@ -144,6 +148,7 @@ export const cassandraAnalyticsSchemas = {
 
   getUsersByUtmSource: () => ({
     tags: ['Reports'],
+    security: [{ bearerAuth: [] }],
     summary: 'Usuários de UTM source que realizaram compra',
     description:
       'Lista usuários que vieram de uma utm_source específica e realizaram compra. Permite análise de ROI por canal de marketing.',

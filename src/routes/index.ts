@@ -7,8 +7,7 @@ import categoryRoutes from '@routes/categories/category.routes';
 import productRoutes from '@routes/products/product.routes';
 import orderRoutes from '@routes/orders/order.routes';
 import recommendationRoutes from '@routes/recommendations/recommendation.routes';
-import userRoutes from '@routes/users/user.routes';
-import topCustomersReportRoutes from '@routes/reports/top-customers-report.routes';
+import reportRoutes from '@/routes/reports/reports.routes';
 import analyticsRoutes from '@routes/analytics/analytics.routes';
 import cartRoutes from '@routes/cart/cart.routes';
 
@@ -21,8 +20,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   fastify.register(productRoutes);
   fastify.register(orderRoutes);
   fastify.register(recommendationRoutes);
-  fastify.register(userRoutes);
-  fastify.register(topCustomersReportRoutes);
+  fastify.register(reportRoutes);
   fastify.register(analyticsRoutes);
   fastify.register(cartRoutes);
 }

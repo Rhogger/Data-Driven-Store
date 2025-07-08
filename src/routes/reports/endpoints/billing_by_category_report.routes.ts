@@ -5,6 +5,7 @@ import { reportSchemas } from '@routes/reports/schema/report.schemas';
 const billingByCategoryReportRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/reports/billing-by-category', {
     schema: reportSchemas.billingByCategory(),
+    preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       const repo = new OrderRepository(fastify);
       const data = await repo.getBillingByCategory();

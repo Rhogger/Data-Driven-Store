@@ -10,6 +10,7 @@ interface CampaignCTRParams {
 const getCampaignCTRRoute = async (fastify: FastifyInstance) => {
   fastify.get('/analytics/campaign-ctr/:origemCampanha', {
     schema: cassandraAnalyticsSchemas.getCampaignCTR(),
+    preHandler: fastify.authenticate,
     handler: async (
       request: FastifyRequest<{ Params: CampaignCTRParams }>,
       reply: FastifyReply,

@@ -27,6 +27,7 @@ const topCustomersReportRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
+    preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       const repo = new OrderRepository(fastify);
       const data = await repo.getTopCustomers();

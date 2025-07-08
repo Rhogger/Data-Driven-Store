@@ -5,6 +5,7 @@ import { AnalyticsRepository } from '@/repositories/analytics/AnalyticsRepositor
 const getConversionFunnelRoute = async (fastify: FastifyInstance) => {
   fastify.get('/analytics/conversion-funnel', {
     schema: cassandraAnalyticsSchemas.getConversionFunnel(),
+    preHandler: fastify.authenticate,
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const analyticsRepo = new AnalyticsRepository(request.server);

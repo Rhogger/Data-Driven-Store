@@ -209,39 +209,23 @@ export class ProductRepository {
     return updatedDocs.map((doc: any) => this.normalizeProduct(doc));
   }
 
-  async getProductReviews(
-    productId: string,
-    page: number,
-    pageSize: number,
-  ): Promise<{ reviews: any[]; total: number } | null> {
-    const skip = (page - 1) * pageSize;
-
+  async getProductReviews(productId: string): Promise<{ reviews: any[] } | null> {
     const pipeline = [
       { $match: { _id: new ObjectId(productId) } },
-
       {
         $project: {
           _id: 0,
-          total: { $size: { $ifNull: ['$avaliacoes', []] } },
           reviews: {
-            $slice: [
-              {
-                $sortArray: {
-                  input: { $ifNull: ['$avaliacoes', []] },
-                  sortBy: { data_avaliacao: -1 },
-                },
-              },
-              skip,
-              pageSize,
-            ],
+            $sortArray: {
+              input: { $ifNull: ['$avaliacoes', []] },
+              sortBy: { data_avaliacao: -1 },
+            },
           },
         },
       },
     ];
 
-    const result = await this.mongoCollection
-      .aggregate<{ reviews: any[]; total: number }>(pipeline)
-      .toArray();
+    const result = await this.mongoCollection.aggregate<{ reviews: any[] }>(pipeline).toArray();
 
     return result.length > 0 ? result[0] : null;
   }
@@ -336,22 +320,6 @@ export class ProductRepository {
       this.fastify.log.warn({ product }, 'Tentativa de salvar produto no cache sem um ID válido.');
       return;
     }
-
-    const cacheData: ProductCacheData = {
-      id_produto: productId,
-      nome: product.nome,
-      descricao: product.descricao,
-      preco: product.preco,
-      marca: product.marca,
-      categorias: product.categorias ?? [],
-      estoque: product.estoque ?? 0,
-      reservado: product.reservado ?? 0,
-      disponivel: product.disponivel ?? product.estoque ?? 0,
-      atributos: product.atributos || {},
-      avaliacoes: Array.isArray(product.avaliacoes)
-        ? product.avaliacoes
-        : Object.values(product.avaliacoes || {}),
-    };
 
     const cacheKey = `produto:${productId}`;
     await this.redis.setex(cacheKey, this.PRODUCT_CACHE_TTL, JSON.stringify(product));

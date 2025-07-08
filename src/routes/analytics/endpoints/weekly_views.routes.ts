@@ -5,6 +5,7 @@ import { ProductViewsAggregatedRepository } from '@/repositories/product-views-a
 const getWeeklyViewsRoute = async (fastify: FastifyInstance) => {
   fastify.get('/analytics/weekly-views', {
     schema: cassandraAnalyticsSchemas.getWeeklyViews(),
+    preHandler: fastify.authenticate,
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const cassandraClient = request.server.cassandra;

@@ -30,28 +30,6 @@ const errorResponse = () => ({
   required: ['success', 'error'],
 });
 
-const paginatedResponse = (itemSchema: any) => ({
-  type: 'object',
-  properties: {
-    success: { type: 'boolean', default: true },
-    data: {
-      type: 'array',
-      items: itemSchema,
-    },
-    pagination: {
-      type: 'object',
-      properties: {
-        page: { type: 'integer', minimum: 1 },
-        pageSize: { type: 'integer', minimum: 1 },
-        hasMore: { type: 'boolean' },
-      },
-      required: ['page', 'pageSize', 'hasMore'],
-    },
-  },
-  required: ['success', 'data', 'pagination'],
-});
-
-// Schema para uma única avaliação
 const reviewSchema = {
   type: 'object',
   properties: {
@@ -63,10 +41,9 @@ const reviewSchema = {
   required: ['id_cliente', 'nota', 'data_avaliacao'],
 };
 
-// Schema base do produto
 const productSchema = {
   type: 'object',
-  additionalProperties: true, // Permitir campos dinâmicos como 'em_promocao'
+  additionalProperties: true,
   properties: {
     id_produto: { type: 'string', description: 'ID único do produto (mapeado de _id)' },
     nome: { type: 'string', description: 'Nome do produto' },
@@ -258,7 +235,7 @@ export const productSchemas = {
   }),
 
   getAveragePriceByBrand: () => ({
-    tags: ['Products', 'Reports'],
+    tags: ['Products'],
     summary: 'Calcular média de preço por marca',
     description:
       'Usa o Aggregation Framework do MongoDB para calcular o preço médio de produtos, agrupado por marca.',
@@ -281,6 +258,7 @@ export const productSchemas = {
 
   search: () => ({
     tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     summary: 'Buscar produtos por atributos e preço',
     description:
       'Busca avançada de produtos. Permite filtrar por atributos específicos (e.g., processador, cor) e por uma faixa de preço. A busca de atributos é case-insensitive para strings.',
@@ -303,31 +281,22 @@ export const productSchemas = {
           minimum: 0,
           description: 'Preço máximo do produto',
         },
-        page: {
-          type: 'integer',
-          minimum: 1,
-          default: 1,
-          description: 'Número da página',
-        },
-        pageSize: {
-          type: 'integer',
-          minimum: 1,
-          maximum: 100,
-          default: 20,
-          description: 'Itens por página',
-        },
       },
       additionalProperties: false,
     },
     response: {
-      200: paginatedResponse(productSchema),
+      200: successResponse({
+        type: 'array',
+        items: productSchema,
+      }),
       400: errorResponse(),
       500: errorResponse(),
     },
   }),
 
   addFieldByCategory: () => ({
-    tags: ['Products', 'Bulk Operations'],
+    tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     summary: 'Adicionar/Atualizar campo em produtos de uma categoria (PUT)',
     description:
       'Adiciona ou atualiza um campo com um valor específico para todos os produtos de uma categoria. Retorna a lista de produtos que foram modificados. Esta é uma operação em massa e pode afetar múltiplos documentos. Campos protegidos como _id, estoque, etc., não podem ser alterados.',
@@ -378,47 +347,20 @@ export const productSchemas = {
   }),
 
   listReviews: () => ({
-    tags: ['Products', 'Reviews'],
+    tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     summary: 'Listar avaliações de um produto',
     description:
-      'Lista todas as avaliações de um produto específico, ordenadas por data (mais recentes primeiro) e com paginação.',
+      'Lista todas as avaliações de um produto específico, ordenadas por data (mais recentes primeiro).',
     params: idParamSchema,
-    querystring: {
-      type: 'object',
-      properties: {
-        page: {
-          type: 'string',
-          pattern: '^[1-9][0-9]*$',
-          default: '1',
-          description: 'Número da página',
-        },
-        pageSize: {
-          type: 'string',
-          pattern: '^[1-9][0-9]*$',
-          default: '10',
-          description: 'Itens por página (máximo: 50)',
-        },
-      },
-    },
     response: {
       200: {
         type: 'object',
         properties: {
           success: { type: 'boolean', default: true },
           data: { type: 'array', items: reviewSchema },
-          pagination: {
-            type: 'object',
-            properties: {
-              page: { type: 'integer', minimum: 1 },
-              pageSize: { type: 'integer', minimum: 0 },
-              totalItems: { type: 'integer', minimum: 0 },
-              totalPages: { type: 'integer', minimum: 0 },
-              hasMore: { type: 'boolean' },
-            },
-            required: ['page', 'pageSize', 'totalItems', 'totalPages', 'hasMore'],
-          },
         },
-        required: ['success', 'data', 'pagination'],
+        required: ['success', 'data'],
       },
       400: errorResponse(),
       404: errorResponse(),

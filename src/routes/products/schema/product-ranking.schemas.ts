@@ -3,6 +3,7 @@ export const productRankingSchemas = {
     summary: 'Buscar ranking dos produtos mais vistos',
     description: 'Retorna o ranking dos produtos mais visualizados, com limite configurável.',
     tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     querystring: {
       type: 'object',
       properties: {
@@ -44,6 +45,7 @@ export const productRankingSchemas = {
     summary: 'Incrementar visualização de produto',
     description: 'Incrementa o contador de visualizações de um produto.',
     tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     params: {
       type: 'object',
       required: ['id_produto'],

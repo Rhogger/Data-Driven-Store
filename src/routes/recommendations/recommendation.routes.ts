@@ -17,26 +17,31 @@ export default async function recommendationRoutes(fastify: FastifyInstance) {
 
   fastify.get('/recommendations/:produtoId/frequently-bought-together', {
     schema: productRecommendationSchemas.frequentlyBoughtTogether(),
+    preHandler: fastify.authenticate,
     handler: frequentlyBoughtTogetherHandler,
   });
 
   fastify.get('/recommendations/customers/:clienteId/user-based', {
     schema: productRecommendationSchemas.userBasedRecommendations(),
+    preHandler: fastify.authenticate,
     handler: userBasedRecommendationsHandler,
   });
 
   fastify.get('/recommendations/customers/:clienteId/category-based', {
     schema: productRecommendationSchemas.categoryBasedRecommendations(),
+    preHandler: fastify.authenticate,
     handler: categoryBasedRecommendationsHandler,
   });
 
   fastify.get('/recommendations/shortest-path/:produtoOrigemId/:produtoDestinoId', {
     schema: productRecommendationSchemas.shortestPath(),
+    preHandler: fastify.authenticate,
     handler: shortestPathHandler,
   });
 
   fastify.get('/recommendations/influencers', {
     schema: productRecommendationSchemas.influencerCustomers(),
+    preHandler: fastify.authenticate,
     handler: influencerCustomersHandler,
   });
 }
