@@ -32,12 +32,19 @@ interface Neo4jConfig {
   password: string;
 }
 
+interface CassandraConfig {
+  contactPoints: string[];
+  localDataCenter: string;
+  keyspace: string;
+  credentials?: { username: string; password: string }; // Credenciais são opcionais, mas se fornecidas, devem ter ambos os campos como string
+}
+
 interface DatabaseConfig {
   postgres: PostgresConfig;
   mongodb: MongoDBConfig;
   redis: RedisConfig;
   neo4j: Neo4jConfig;
-  // cassandra: CassandraConfig;
+  cassandra: CassandraConfig;
 }
 
 export const databaseConfig: DatabaseConfig = {
@@ -62,5 +69,10 @@ export const databaseConfig: DatabaseConfig = {
     uri: process.env.NEO4J_URI || 'bolt://localhost:7687',
     user: process.env.NEO4J_USER || 'neo4j',
     password: process.env.NEO4J_PASSWORD || 'admin',
+  },
+  cassandra: {
+    contactPoints: (process.env.CASSANDRA_HOST || 'cassandra').split(','),
+    localDataCenter: process.env.CASSANDRA_DC || 'datacenter1',
+    keyspace: process.env.CASSANDRA_KEYSPACE || 'datadriven_store',
   },
 };

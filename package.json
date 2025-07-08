@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "clean": "rm -rf dist || sudo rm -rf dist",
-    "build": "./build.sh",
+    "build": "bash ./build.sh",
     "start": "node dist/index.js",
     "dev:watch": "ts-node-dev --respawn --transpile-only --ignore-watch node_modules -r tsconfig-paths/register src/index.ts",
     "dev:ts": "ts-node -r tsconfig-paths/register src/index.ts",
@@ -18,7 +18,7 @@
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\" \"*.{js,json,md}\"",
     "check-format": "prettier --check \"src/**/*.{ts,js,json,md}\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "seed:all": "node dist/db/seeders/seed-all.js"
+    "seed:all": "node dist/src/seeders/seed-all.js"
   },
   "keywords": [],
   "author": "",
@@ -27,7 +27,6 @@
     "@eslint/js": "^9.30.1",
     "@tsconfig/node24": "^24.0.1",
     "@types/fs-extra": "^11.0.4",
-    "@types/ioredis": "^5.0.0",
     "@types/node": "^24.0.10",
     "@types/pg": "^8.15.4",
     "@typescript-eslint/eslint-plugin": "^8.35.1",
@@ -57,7 +56,6 @@
     "mongodb": "^6.17.0",
     "neo4j-driver": "^5.28.1",
     "pg": "^8.16.3",
-    "redis": "^5.5.6",
     "tsconfig-paths": "^4.2.0"
   }
 }

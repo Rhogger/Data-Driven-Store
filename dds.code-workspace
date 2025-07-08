@@ -20,5 +20,18 @@
     "files.exclude": {
       "**/node_modules": true,
     },
+    "workbench.colorCustomizations": {},
+    "sqltools.connections": [
+      {
+        "server": "localhost",
+        "port": 9042,
+        "previewLimit": 50,
+        "driver": "Cassandra",
+        "name": "cassandra",
+        "database": "datadriven_store",
+        "username": "cassandra",
+        "password": "cassandra123",
+      },
+    ],
   },
 }

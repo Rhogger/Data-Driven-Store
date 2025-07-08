@@ -5,6 +5,8 @@ import { Pool } from 'pg';
 import neo4j from 'neo4j-driver';
 import Redis from 'ioredis';
 import { databaseConfig } from '@config/database';
+import seedCassandra from './seed-cassandra';
+import { Client } from 'cassandra-driver';
 
 // Tipos para clareza
 type Product = {
@@ -617,6 +619,11 @@ async function main() {
     await seedNeo4j(pgPool, createdProducts);
     await seedRedis(redisClient, pgSeedData.clientIds, createdProducts);
 
+    // Seed do Cassandra
+    const cassandraClient = new Client(databaseConfig.cassandra);
+    await cassandraClient.connect();
+    await seedCassandra(cassandraClient, pgPool, mongoClient);
+    await cassandraClient.shutdown();
     console.log('\n🎉 Seeding orquestrado concluído com sucesso!');
   } finally {
     // Fechar todas as conexões
