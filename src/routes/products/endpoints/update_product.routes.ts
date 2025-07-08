@@ -7,7 +7,7 @@ interface UpdateProductInput {
   descricao?: string;
   marca?: string;
   preco?: number;
-  id_categoria?: number;
+  categorias?: number[];
   atributos?: Record<string, any>;
 }
 

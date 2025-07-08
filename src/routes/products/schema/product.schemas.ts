@@ -43,11 +43,16 @@ const productSchema = {
   type: 'object',
   properties: {
     _id: { type: 'string', description: 'ID único do produto' },
+    id_produto: { type: 'string', description: 'ID único do produto (mapeado de _id)' },
     nome: { type: 'string', description: 'Nome do produto' },
     descricao: { type: 'string', description: 'Descrição do produto' },
     marca: { type: 'string', description: 'Marca do produto' },
     preco: { type: 'number', minimum: 0, description: 'Preço do produto' },
-    id_categoria: { type: 'integer', minimum: 1, description: 'ID da categoria' },
+    categorias: {
+      type: 'array',
+      items: { type: 'integer', minimum: 1 },
+      description: 'Array de IDs das categorias',
+    },
     estoque: { type: 'integer', minimum: 0, description: 'Quantidade em estoque' },
     reservado: { type: 'integer', minimum: 0, description: 'Quantidade reservada' },
     disponivel: { type: 'integer', minimum: 0, description: 'Quantidade disponível' },
@@ -64,19 +69,24 @@ const productSchema = {
     created_at: { type: 'string', format: 'date-time', description: 'Data de criação' },
     updated_at: { type: 'string', format: 'date-time', description: 'Data de atualização' },
   },
-  required: ['_id', 'nome', 'preco', 'id_categoria', 'estoque', 'reservado', 'disponivel'],
+  required: ['nome', 'preco', 'categorias', 'estoque', 'reservado', 'disponivel'],
+  oneOf: [{ required: ['_id'] }, { required: ['id_produto'] }],
 };
 
 // Schema para criação de produto
 const createProductBodySchema = {
   type: 'object',
-  required: ['nome', 'preco', 'id_categoria', 'estoque'],
+  required: ['nome', 'preco', 'categorias', 'estoque'],
   properties: {
     nome: { type: 'string', minLength: 1, maxLength: 200, description: 'Nome do produto' },
     descricao: { type: 'string', maxLength: 1000, description: 'Descrição do produto' },
     marca: { type: 'string', maxLength: 100, description: 'Marca do produto (opcional)' },
     preco: { type: 'number', minimum: 0, description: 'Preço do produto' },
-    id_categoria: { type: 'integer', minimum: 1, description: 'ID da categoria' },
+    categorias: {
+      type: 'array',
+      items: { type: 'integer', minimum: 1 },
+      description: 'Array de IDs das categorias',
+    },
     estoque: { type: 'integer', minimum: 0, description: 'Quantidade em estoque' },
     atributos: {
       type: 'object',
@@ -96,7 +106,11 @@ const updateProductBodySchema = {
     descricao: { type: 'string', maxLength: 1000, description: 'Descrição do produto' },
     marca: { type: 'string', maxLength: 100, description: 'Marca do produto' },
     preco: { type: 'number', minimum: 0, description: 'Preço do produto' },
-    id_categoria: { type: 'integer', minimum: 1, description: 'ID da categoria' },
+    categorias: {
+      type: 'array',
+      items: { type: 'integer', minimum: 1 },
+      description: 'Array de IDs das categorias',
+    },
     atributos: {
       type: 'object',
       description:
@@ -148,12 +162,18 @@ const lowStockSchema = {
       items: {
         type: 'object',
         properties: {
-          _id: { type: 'string' },
+          id_produto: { type: 'string', description: 'ID do produto' },
           nome: { type: 'string' },
           estoque: { type: 'integer' },
+          reservado: { type: 'integer' },
+          disponivel: { type: 'integer' },
+          categorias: {
+            type: 'array',
+            items: { type: 'integer' },
+          },
           // adicione outros campos se quiser
         },
-        required: ['_id', 'nome', 'estoque'],
+        required: ['id_produto', 'nome', 'estoque', 'reservado', 'disponivel'],
       },
     },
   },

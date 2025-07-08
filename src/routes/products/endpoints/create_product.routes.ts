@@ -8,7 +8,7 @@ interface CreateProductInput {
   descricao: string;
   marca: string;
   preco: number;
-  id_categoria: number;
+  categorias: number[];
   estoque: number;
   atributos?: Record<string, any>;
 }
@@ -37,7 +37,7 @@ const createProductRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        const { preco, estoque, id_categoria } = request.body;
+        const { preco, estoque, categorias } = request.body;
 
         // Validações diretas na rota
         if (preco <= 0) {
@@ -54,23 +54,23 @@ const createProductRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        // Validar se a categoria existe
-        const categoryRepository = new CategoryRepository(fastify);
-        const categoryExists = await categoryRepository.exists(id_categoria);
-        if (!categoryExists) {
+        if (!categorias || categorias.length === 0) {
           return reply.status(400).send({
             success: false,
-            error: `Categoria com ID ${id_categoria} não existe`,
+            error: 'Produto deve ter pelo menos uma categoria',
           });
         }
 
-        // Buscar o nome da categoria para o MongoDB
-        const category = await categoryRepository.findById(id_categoria);
-        if (!category) {
-          return reply.status(400).send({
-            success: false,
-            error: `Categoria com ID ${id_categoria} não encontrada`,
-          });
+        // Validar se todas as categorias existem
+        const categoryRepository = new CategoryRepository(fastify);
+        for (const categoryId of categorias) {
+          const categoryExists = await categoryRepository.exists(categoryId);
+          if (!categoryExists) {
+            return reply.status(400).send({
+              success: false,
+              error: `Categoria com ID ${categoryId} não existe`,
+            });
+          }
         }
 
         const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
@@ -78,14 +78,8 @@ const createProductRoutes: FastifyPluginAsync = async (fastify) => {
         // Debug: log dos dados sendo enviados
         fastify.log.info({ body: request.body }, 'Dados para criar produto');
 
-        // Preparar dados para o ProductRepository (que espera categoria como string)
-        const productData = {
-          ...request.body,
-          categoria: category.nome, // Converter ID para nome
-        };
-        delete (productData as any).id_categoria; // Remover o ID da categoria
-
-        const product = await productRepository.create(productData);
+        // O ProductRepository agora espera categorias como array de números
+        const product = await productRepository.create(request.body);
 
         // Debug: log do produto criado
         fastify.log.info({ product }, 'Produto criado');

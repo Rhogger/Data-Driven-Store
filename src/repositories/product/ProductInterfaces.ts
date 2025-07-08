@@ -3,11 +3,14 @@ import { ObjectId } from 'mongodb';
 export interface Product {
   _id?: ObjectId;
   id?: string;
+  id_produto?: string; // Campo mapeado de _id
   nome: string;
   descricao: string;
   preco: number;
   estoque?: number;
-  categoria: string;
+  reservado?: number; // Quantidade reservada
+  disponivel?: number; // estoque - reservado (calculado)
+  categorias: number[]; // Array de IDs de categoria
   marca: string;
   atributos?: Record<string, any>;
   avaliacoes?: Array<Record<string, any>>;
@@ -20,7 +23,7 @@ export interface CreateProductInput {
   descricao: string;
   preco: number;
   estoque?: number;
-  categoria: string;
+  categorias: number[]; // Array de IDs de categoria
   marca: string;
   atributos?: Record<string, any>;
 }
@@ -30,7 +33,7 @@ export interface UpdateProductInput {
   descricao?: string;
   preco?: number;
   estoque?: number;
-  categoria?: string;
+  categorias?: number[]; // Array de IDs de categoria
   marca?: string;
   atributos?: Record<string, any>;
   avaliacoes?: Array<Record<string, any>>;
