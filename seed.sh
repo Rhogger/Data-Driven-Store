@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Script para popular os bancos de dados de forma orquestrada.
-# Executa o script de seed em TypeScript que lida com as dependências entre bancos.
-
 # Cores para logs
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -10,35 +7,62 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-echo -e "${CYAN}🌱 === INICIANDO PROCESSO DE SEEDING ORQUESTRADO === ${NC}"
+# Carregar variáveis do .env
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
 
-# Função para verificar se um container está saudável
+# Função para aguardar um container ficar saudável
 wait_for_healthy_container() {
-  local service_name=$1
-  echo -e "${YELLOW}⏳ Aguardando o serviço '${service_name}' ficar saudável...${NC}"
-  # Espera até que o status de saúde seja 'healthy'
-  while [ "$(docker compose ps -q ${service_name} | xargs docker inspect -f '{{.State.Health.Status}}' 2>/dev/null)" != "healthy" ]; do
-    echo -n "."
-    sleep 5
-  done
-  echo -e "\n${GREEN}✅ Serviço '${service_name}' está saudável e pronto!${NC}"
+    local container_name=$1
+    local max_wait=${2:-240} # Padrão de 240 segundos (4 minutos)
+    local interval=5
+    local elapsed_time=0
+
+    echo -e "${YELLOW}⏳ Aguardando o serviço '${container_name}' ficar saudável... (até ${max_wait}s)${NC}"
+
+    while [ $elapsed_time -lt $max_wait ]; do
+        local status=$(docker inspect --format '{{.State.Health.Status}}' "${container_name}" 2>/dev/null)
+
+        if [ "$status" == "healthy" ]; then
+            echo -e "${GREEN}✅ Serviço '${container_name}' está saudável e pronto!${NC}"
+            return 0
+        fi
+
+        sleep $interval
+        elapsed_time=$((elapsed_time + interval))
+        echo -n "."
+    done
+
+    echo -e "\n${RED}❌ O serviço '${container_name}' não ficou saudável dentro do tempo limite de ${max_wait} segundos.${NC}"
+    echo -e "${RED}   Logs do container:"
+    docker logs "${container_name}" --tail 50
+    return 1
 }
 
-# 1. Aguardar os bancos de dados ficarem prontos
-# A cláusula depends_on no docker-compose já faz isso, mas uma verificação extra é segura.
-wait_for_healthy_container "mongo"
-wait_for_healthy_container "postgres"
-wait_for_healthy_container "redis"
-wait_for_healthy_container "neo4j"
+# 1. Aguardar todos os serviços de banco de dados ficarem saudáveis
+wait_for_healthy_container "postgres_db" || exit 1
+wait_for_healthy_container "mongo_db" || exit 1
+wait_for_healthy_container "redis" || exit 1
+wait_for_healthy_container "neo4j_db" || exit 1
+wait_for_healthy_container "cassandra_db" || exit 1
+
+# Aguardar a API ficar saudável antes de executar comandos nela
+# Usamos o nome do container 'datadriven_api' que foi definido no docker-compose.yml
+echo -e "\n${YELLOW}⏳ Aguardando a API 'datadriven_api' ficar saudável...${NC}"
+wait_for_healthy_container "datadriven_api" || exit 1
+
+# Adiciona uma pequena pausa. A API pode se tornar 'healthy' (responder a pings HTTP)
+# um pouco antes de estar 100% pronta para operações de banco de dados intensas como o seeding.
+echo -e "${CYAN}API está saudável. Aguardando 5 segundos extras para garantir a estabilização...${NC}"
+sleep 5
 
 # 2. Executar o script de seed orquestrado via pnpm
-echo -e "\n${CYAN}📦 Executando o script de seed principal (seed-all.ts)...${NC}"
-# Este script irá limpar as tabelas, popular o MongoDB com produtos e depois o PostgreSQL com pedidos, usando os IDs reais.
+echo -e "\n${CYAN}📦 Executando o script de seed principal (seed-all.ts) no serviço 'dds_api'...${NC}"
 docker compose exec -T dds_api pnpm seed:all
-
 if [ $? -ne 0 ]; then
-    echo -e "${RED}❌ Falha ao executar o script de seed 'pnpm seed:all'.${NC}"
+    echo -e "${RED}❌ Falha ao executar o script de seed 'pnpm seed:all' no serviço 'dds_api'.${NC}"
     exit 1
 fi
 
-echo -e "\n${GREEN}🎉 === SEEDING CONCLUÍDO COM SUCESSO! === ${NC}"
+echo -e "${GREEN}✅ Processo de seeding concluído.${NC}"

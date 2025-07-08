@@ -18,7 +18,7 @@
     "format": "prettier --write \"src/**/*.{ts,js,json,md}\" \"*.{js,json,md}\"",
     "check-format": "prettier --check \"src/**/*.{ts,js,json,md}\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "seed:all": "node dist/db/seeders/seed-all.js"
+    "seed:all": "node dist/src/seeders/seed-all.js"
   },
   "keywords": [],
   "author": "",

@@ -5,6 +5,8 @@ import { Pool } from 'pg';
 import neo4j from 'neo4j-driver';
 import Redis from 'ioredis';
 import { databaseConfig } from '@config/database';
+import seedCassandra from './seed-cassandra';
+import { Client } from 'cassandra-driver';
 
 // Tipos para clareza
 type Product = {
@@ -17,7 +19,7 @@ type Product = {
   estoque: number;
   reservado: number;
   disponivel: number;
-  avaliacoes: { id_cliente: number; nota: number; comentario?: string }[];
+  avaliacoes: { id_cliente: number; nota: number; comentario?: string; data_avaliacao: Date }[];
   created_at: Date;
   updated_at: Date;
 };
@@ -92,34 +94,28 @@ async function seedPostgresBase(
     console.log('   -> Métodos de pagamento inseridos.');
 
     // 4. Categorias
-    const categoriasBase = [
+    const allCategoriesNames = [
       'Eletrônicos',
       'Livros',
       'Roupas',
       'Casa e Cozinha',
       'Esportes e Lazer',
       'Ferramentas',
+      // Antigas subcategorias agora são categorias principais
+      'Smartphones',
+      'Notebooks',
+      'Fones de Ouvido',
+      'Ficção Científica',
+      'Fantasia',
+      'Técnico',
+      'Camisetas',
+      'Calças',
     ];
-    const subcategorias = {
-      Eletrônicos: ['Smartphones', 'Notebooks', 'Fones de Ouvido'],
-      Livros: ['Ficção Científica', 'Fantasia', 'Técnico'],
-      Roupas: ['Camisetas', 'Calças'],
-    };
 
-    for (const nomeCat of categoriasBase) {
-      const res = await client.query(
-        'INSERT INTO categorias (nome) VALUES ($1) ON CONFLICT DO NOTHING RETURNING id_categoria',
-        [nomeCat],
-      );
-      if (res.rows.length > 0 && subcategorias[nomeCat as keyof typeof subcategorias]) {
-        const idPai = res.rows[0].id_categoria;
-        for (const nomeSub of subcategorias[nomeCat as keyof typeof subcategorias]) {
-          await client.query(
-            'INSERT INTO categorias (nome, id_categoria_pai) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-            [nomeSub, idPai],
-          );
-        }
-      }
+    for (const nomeCat of allCategoriesNames) {
+      await client.query('INSERT INTO categorias (nome) VALUES ($1) ON CONFLICT DO NOTHING', [
+        nomeCat,
+      ]);
     }
     console.log('   -> Categorias inseridas.');
 
@@ -212,7 +208,7 @@ function getRandomCategories(allCategoryIds: number[], count: number): number[] 
 // Função auxiliar para gerar avaliações aleatórias
 function generateRandomReviews(
   clientIds: number[],
-): { id_cliente: number; nota: number; comentario: string }[] {
+): { id_cliente: number; nota: number; comentario: string; data_avaliacao: Date }[] {
   const reviews = [];
   const numReviews = Math.floor(Math.random() * 6); // 0 a 5 reviews
   if (numReviews === 0 || clientIds.length === 0) {
@@ -235,6 +231,7 @@ function generateRandomReviews(
       id_cliente: clientId,
       nota: Math.floor(Math.random() * 5) + 1, // Nota de 1 a 5
       comentario: comentarios[Math.floor(Math.random() * comentarios.length)],
+      data_avaliacao: new Date(Date.now() - Math.floor(Math.random() * 60) * 24 * 60 * 60 * 1000), // Data aleatória nos últimos 60 dias
     });
   }
   return reviews;
@@ -298,6 +295,36 @@ async function seedMongo(
     );
   }
   return insertedProducts;
+}
+
+async function seedUserPreferences(
+  mongoClient: MongoClient,
+  { categoryIds, clientIds }: { categoryIds: number[]; clientIds: number[] },
+) {
+  console.log('🌱 [Mongo] Iniciando seed de preferências de usuário...');
+  const db = mongoClient.db(databaseConfig.mongodb.database);
+  const preferencesCollection = db.collection('user_preferences');
+
+  await preferencesCollection.deleteMany({});
+  console.log('🧹 [Mongo] Coleção de preferências de usuário limpa.');
+
+  const preferencesToInsert = [];
+  for (const clientId of clientIds) {
+    preferencesToInsert.push({
+      id_cliente: clientId,
+      // Pega de 1 a 4 categorias aleatórias para cada usuário
+      preferencias: getRandomCategories(categoryIds, Math.floor(Math.random() * 4) + 1),
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+  }
+
+  if (preferencesToInsert.length > 0) {
+    const result = await preferencesCollection.insertMany(preferencesToInsert);
+    console.log(`✅ [Mongo] ${result.insertedCount} preferências de usuário inseridas.`);
+  } else {
+    console.log('⚠️ [Mongo] Nenhum cliente encontrado para criar preferências.');
+  }
 }
 
 async function seedPostgresOrders(pgPool: Pool, products: Product[]) {
@@ -403,9 +430,7 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
 
     // 2. Buscar dados de base do PostgreSQL
     const { rows: clients } = await pgPool.query('SELECT id_cliente, nome FROM clientes');
-    const { rows: categories } = await pgPool.query(
-      'SELECT id_categoria, nome, id_categoria_pai FROM categorias',
-    );
+    const { rows: categories } = await pgPool.query('SELECT id_categoria, nome FROM categorias');
     const { rows: orderItems } = await pgPool.query(`
       SELECT p.id_cliente, ip.id_produto, p.data_pedido, ip.quantidade
       FROM itens_pedido ip
@@ -423,7 +448,6 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
     const categoriesForNeo4j = categories.map((cat) => ({
       ...cat,
       id_categoria: neo4j.int(cat.id_categoria),
-      id_categoria_pai: cat.id_categoria_pai ? neo4j.int(cat.id_categoria_pai) : null,
     }));
 
     const marcas = [...new Set(products.map((p) => p.marca))];
@@ -453,14 +477,6 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
 
     // 4. Criar relacionamentos
     console.log('   -> 🔗 Criando relacionamentos...');
-    // Categorias -> Subcategorias
-    await session.run(
-      `UNWIND $categories as cat
-       MATCH (pai:Categoria {id_categoria: cat.id_categoria_pai}), (filha:Categoria {id_categoria: cat.id_categoria})
-       WHERE cat.id_categoria_pai IS NOT NULL
-       MERGE (pai)-[:PAI_DE]->(filha)`,
-      { categories: categoriesForNeo4j },
-    );
 
     // Produtos -> Categorias e Marcas
     const productRelations = products.map((p) => ({
@@ -598,10 +614,16 @@ async function main() {
     await cleanAllTables(pgPool);
     const pgSeedData = await seedPostgresBase(pgPool);
     const createdProducts = await seedMongo(mongoClient, pgSeedData);
+    await seedUserPreferences(mongoClient, pgSeedData);
     await seedPostgresOrders(pgPool, createdProducts);
     await seedNeo4j(pgPool, createdProducts);
     await seedRedis(redisClient, pgSeedData.clientIds, createdProducts);
 
+    // Seed do Cassandra
+    const cassandraClient = new Client(databaseConfig.cassandra);
+    await cassandraClient.connect();
+    await seedCassandra(cassandraClient, pgPool, mongoClient);
+    await cassandraClient.shutdown();
     console.log('\n🎉 Seeding orquestrado concluído com sucesso!');
   } finally {
     // Fechar todas as conexões

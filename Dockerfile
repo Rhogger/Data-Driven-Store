@@ -2,8 +2,8 @@ FROM node:24-alpine
 
 WORKDIR /app
 
-# Instalar netcat para teste de conectividade
-RUN apk add --no-cache netcat-openbsd bash
+# Instalar ferramentas de diagnóstico e conectividade
+RUN apk add --no-cache curl netcat-openbsd bash
 
 # Copiar arquivos de configuração
 COPY package.json pnpm-lock.yaml tsconfig.json ./

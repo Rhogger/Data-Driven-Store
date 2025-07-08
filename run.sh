@@ -14,20 +14,16 @@ if [ "${NODE_ENV}" = "development" ]; then
     echo "🔥 INICIANDO EM MODO DESENVOLVIMENTO COM HOT RELOAD"
     echo ""
 
-    # 0. Aguardar bancos de dados estarem prontos
-    echo "0. Aguardando bancos de dados ficarem prontos..."
-    ./wait-for-databases.sh
-
-    # Iniciar aplicação em modo desenvolvimento com hot reload
+    # O Docker Compose (com depends_on e healthchecks) já garante que os bancos
+    # de dados estão prontos antes de iniciar este container.
     echo "1. Iniciando aplicação com hot reload..."
     pnpm run dev:watch
 else
     echo "🏗️ INICIANDO EM MODO PRODUÇÃO (BUILD + EXECUÇÃO)"
     echo ""
 
-    # 0. Aguardar bancos de dados estarem prontos
-    echo "0. Aguardando bancos de dados ficarem prontos..."
-    ./wait-for-databases.sh
+    # O Docker Compose (com depends_on e healthchecks) já garante que os bancos
+    # de dados estão prontos antes de iniciar este container.
 
     # 1. Limpar build anterior
     echo "1. Limpando build anterior..."
