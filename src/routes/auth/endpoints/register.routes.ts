@@ -13,7 +13,6 @@ export async function registerHandler(request: FastifyRequest, reply: FastifyRep
   try {
     const { nome, email, cpf, telefone } = request.body as RegisterRequest;
 
-    // Validações obrigatórias
     if (!nome || !email || !cpf || !telefone) {
       return reply.status(400).send({
         success: false,
@@ -21,7 +20,6 @@ export async function registerHandler(request: FastifyRequest, reply: FastifyRep
       });
     }
 
-    // Validação de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return reply.status(400).send({
@@ -30,7 +28,6 @@ export async function registerHandler(request: FastifyRequest, reply: FastifyRep
       });
     }
 
-    // Validação de nome (mínimo 2 caracteres)
     if (nome.trim().length < 2) {
       return reply.status(400).send({
         success: false,
@@ -38,7 +35,6 @@ export async function registerHandler(request: FastifyRequest, reply: FastifyRep
       });
     }
 
-    // Validação básica de CPF (11 dígitos)
     const cpfClean = cpf.replace(/\D/g, '');
     if (cpfClean.length !== 11) {
       return reply.status(400).send({
@@ -47,7 +43,6 @@ export async function registerHandler(request: FastifyRequest, reply: FastifyRep
       });
     }
 
-    // Validação básica de telefone
     const phoneClean = telefone.replace(/\D/g, '');
     if (phoneClean.length < 10 || phoneClean.length > 11) {
       return reply.status(400).send({
@@ -58,7 +53,6 @@ export async function registerHandler(request: FastifyRequest, reply: FastifyRep
 
     const customerRepo = new CustomerRepository(request.server);
 
-    // Verificar se email já existe
     const existingCustomer = await customerRepo.findByEmail(email);
     if (existingCustomer) {
       return reply.status(409).send({
@@ -67,7 +61,6 @@ export async function registerHandler(request: FastifyRequest, reply: FastifyRep
       });
     }
 
-    // Preparar dados do cliente
     const customerData: CustomerInput = {
       nome: nome.trim(),
       email: email.toLowerCase().trim(),
@@ -75,7 +68,6 @@ export async function registerHandler(request: FastifyRequest, reply: FastifyRep
       telefone: phoneClean,
     };
 
-    // Criar cliente
     const newCustomer = await customerRepo.create(customerData);
 
     return reply.status(201).send({
@@ -95,7 +87,6 @@ export async function registerHandler(request: FastifyRequest, reply: FastifyRep
   } catch (error: any) {
     request.server.log.error('Erro no cadastro:', error.message);
 
-    // Tratamento específico para erros de constraint
     if (error.message.includes('Email já está em uso')) {
       return reply.status(409).send({
         success: false,

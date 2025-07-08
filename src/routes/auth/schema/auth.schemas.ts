@@ -1,5 +1,5 @@
 export const authSchemas = {
-  login: {
+  login: () => ({
     summary: 'Realizar login do usuário',
     description:
       'Autentica um usuário no sistema usando seu email. Retorna os dados do cliente se encontrado.',
@@ -17,6 +17,7 @@ export const authSchemas = {
     },
     response: {
       200: {
+        description: 'Login realizado com sucesso',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -42,7 +43,16 @@ export const authSchemas = {
           },
         },
       },
+      400: {
+        description: 'Erro de validação',
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: { type: 'string' },
+        },
+      },
       404: {
+        description: 'Usuário não encontrado',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -50,17 +60,10 @@ export const authSchemas = {
           action: { type: 'string' },
         },
       },
-      400: {
-        type: 'object',
-        properties: {
-          success: { type: 'boolean' },
-          error: { type: 'string' },
-        },
-      },
     },
-  },
+  }),
 
-  register: {
+  register: () => ({
     summary: 'Cadastrar novo cliente',
     description:
       'Registra um novo cliente no sistema. Valida CPF e dados obrigatórios antes de criar a conta.',
@@ -91,6 +94,7 @@ export const authSchemas = {
     },
     response: {
       201: {
+        description: 'Cliente cadastrado com sucesso',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -114,6 +118,7 @@ export const authSchemas = {
         },
       },
       400: {
+        description: 'Erro de validação',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -121,6 +126,7 @@ export const authSchemas = {
         },
       },
       409: {
+        description: 'Conflito de dados (email ou CPF já cadastrado)',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -128,5 +134,5 @@ export const authSchemas = {
         },
       },
     },
-  },
+  }),
 };

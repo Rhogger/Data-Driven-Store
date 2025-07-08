@@ -17,7 +17,6 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
       });
     }
 
-    // Validação básica de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return reply.status(400).send({
@@ -29,7 +28,6 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
     const customerRepo = new CustomerRepository(request.server);
     const sessionRepo = new SessionRepository(request.server);
 
-    // Verificar se cliente existe
     const customer = await customerRepo.findByEmail(email);
 
     if (!customer) {
@@ -40,7 +38,6 @@ export async function loginHandler(request: FastifyRequest, reply: FastifyReply)
       });
     }
 
-    // Criar sessão no Redis (tokens gerados automaticamente)
     const sessionData = await sessionRepo.create(customer.id_cliente.toString());
 
     return reply.send({
