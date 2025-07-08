@@ -1,7 +1,8 @@
-import 'fastify';
+import '@fastify/jwt';
 
-declare module 'fastify' {
-  interface FastifyRequest {
-    jwtVerify: () => Promise<void>;
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    payload: { id_cliente: number; [key: string]: any };
+    user: { id_cliente: number; [key: string]: any };
   }
 }

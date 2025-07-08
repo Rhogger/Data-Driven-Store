@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
+import authenticate from '@/plugins/authenticate';
 import postgresConnector from '@plugins/postgresConnector';
 import mongodbConnector from '@plugins/mongodbConnector';
 import redisConnector from '@plugins/redisConnector';
@@ -9,15 +10,14 @@ import apiRoutes from '@routes/index';
 
 const app = Fastify({
   logger: true,
-  pluginTimeout: 60000, // 60 segundos para plugins (permite retry do Cassandra)
+  pluginTimeout: 60000,
 });
 
-// Registrar plugin JWT
+app.register(authenticate);
 app.register(fastifyJwt, {
   secret: process.env.JWT_SECRET || 'supersecret',
 });
 
-// Registrar Swagger
 app.register(import('@fastify/swagger'), {
   openapi: {
     openapi: '3.0.0',
@@ -32,6 +32,15 @@ app.register(import('@fastify/swagger'), {
         description: 'Servidor de desenvolvimento',
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
     tags: [
       { name: 'Health Check', description: 'Endpoints de verificação de saúde' },
       { name: 'Database Tests', description: 'Endpoints para testar conexões com bancos de dados' },
@@ -53,7 +62,6 @@ app.register(import('@fastify/swagger'), {
   },
 });
 
-// Registrar Swagger UI
 app.register(import('@fastify/swagger-ui'), {
   routePrefix: '/docs',
   uiConfig: {
