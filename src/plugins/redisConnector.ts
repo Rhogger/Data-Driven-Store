@@ -1,15 +1,9 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 import Redis from 'ioredis';
 import { databaseConfig } from '@config/database';
 
-declare module 'fastify' {
-  interface FastifyInstance {
-    redis: Redis;
-  }
-}
-
-async function redisConnector(fastify: FastifyInstance) {
+const redisConnector: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   const redisClient = new Redis({
     host: databaseConfig.redis.host,
     port: databaseConfig.redis.port,
@@ -18,7 +12,6 @@ async function redisConnector(fastify: FastifyInstance) {
     lazyConnect: true,
   });
 
-  // Eventos de conexão
   redisClient.on('connect', () => {
     fastify.log.info('Conectando ao Redis...');
   });
@@ -39,7 +32,6 @@ async function redisConnector(fastify: FastifyInstance) {
     fastify.log.info('Reconectando ao Redis...');
   });
 
-  // Conectar ao Redis
   try {
     await redisClient.connect();
   } catch (error) {
@@ -47,14 +39,12 @@ async function redisConnector(fastify: FastifyInstance) {
     throw error;
   }
 
-  // Registrar o cliente Redis na instância do Fastify
   fastify.decorate('redis', redisClient);
 
-  // Fechar conexão quando o servidor for fechado
   fastify.addHook('onClose', async () => {
     await redisClient.quit();
   });
-}
+};
 
 export default fp(redisConnector, {
   name: 'redis-connector',
