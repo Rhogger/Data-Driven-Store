@@ -1,12 +1,26 @@
 // Helpers para respostas padrão
-const successResponse = (dataSchema?: any) => ({
-  type: 'object',
-  properties: {
-    success: { type: 'boolean', default: true },
-    ...(dataSchema && { data: dataSchema }),
-  },
-  required: ['success'],
-});
+const successResponse = (dataSchema?: any) => {
+  if (!dataSchema) {
+    return {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', default: true },
+      },
+      required: ['success'],
+    };
+  }
+  return {
+    type: 'object',
+    properties: {
+      success: { type: 'boolean', default: true },
+      data: {
+        type: 'object',
+        ...dataSchema,
+      },
+    },
+    required: ['success', 'data'],
+  };
+};
 
 const errorResponse = () => ({
   type: 'object',
@@ -38,11 +52,9 @@ const paginatedResponse = (itemSchema: any) => ({
   required: ['success', 'data', 'pagination'],
 });
 
-// Schema base do produto
 const productSchema = {
   type: 'object',
   properties: {
-    _id: { type: 'string', description: 'ID único do produto' },
     id_produto: { type: 'string', description: 'ID único do produto (mapeado de _id)' },
     nome: { type: 'string', description: 'Nome do produto' },
     descricao: { type: 'string', description: 'Descrição do produto' },
@@ -70,7 +82,7 @@ const productSchema = {
     updated_at: { type: 'string', format: 'date-time', description: 'Data de atualização' },
   },
   required: ['nome', 'preco', 'categorias', 'estoque', 'reservado', 'disponivel'],
-  oneOf: [{ required: ['_id'] }, { required: ['id_produto'] }],
+  oneOf: [{ required: ['id_produto'] }],
 };
 
 // Schema para criação de produto

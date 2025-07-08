@@ -5,6 +5,7 @@ import { cartSchemas } from '@routes/cart/schema/cart.schemas';
 const clearCartRoutes = async (fastify: FastifyInstance) => {
   fastify.post('/cart/clear', {
     schema: cartSchemas.clear(),
+    preHandler: fastify.authenticate,
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       const id_cliente = (request.user as any)?.id_cliente;
       if (!id_cliente) {

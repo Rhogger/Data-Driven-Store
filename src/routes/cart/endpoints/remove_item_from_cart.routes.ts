@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { CartRepository } from '@/repositories/cart/CartRepository';
 import { cartSchemas } from '@routes/cart/schema/cart.schemas';
+import { ProductRepository } from '@/repositories/product/ProductRepository';
 
 interface RemoveItemFromCartBody {
   id_produto: string;
@@ -10,6 +11,7 @@ interface RemoveItemFromCartBody {
 const removeItemFromCartRoutes = async (fastify: FastifyInstance) => {
   fastify.post('/cart/remove', {
     schema: cartSchemas.removeItem(),
+    preHandler: fastify.authenticate,
     handler: async (
       request: FastifyRequest<{ Body: RemoveItemFromCartBody }>,
       reply: FastifyReply,
@@ -25,6 +27,12 @@ const removeItemFromCartRoutes = async (fastify: FastifyInstance) => {
         return reply
           .status(400)
           .send({ success: false, message: 'id_produto e quantidade válidos são obrigatórios.' });
+
+      const productRepo = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+      const product = await productRepo.findById(id_produto);
+
+      if (!product)
+        return reply.status(404).send({ success: false, message: 'Produto não encontrado.' });
 
       const cartRepo = new CartRepository(fastify.redis);
       const cart = await cartRepo.findByClientId(id_cliente);

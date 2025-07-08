@@ -3,18 +3,13 @@ export const cartSchemas = {
     summary: 'Adicionar item ao carrinho',
     description:
       'Adiciona um produto ao carrinho do cliente autenticado. Se o produto já existir, incrementa a quantidade.',
-    tags: ['Cart'],
+    tags: ['Carts'],
+    security: [{ bearerAuth: [] }],
     body: {
       type: 'object',
       required: ['id_produto'],
       properties: {
         id_produto: { type: 'string', description: 'ID do produto a ser adicionado' },
-        quantidade: {
-          type: 'number',
-          minimum: 1,
-          default: 1,
-          description: 'Quantidade a adicionar',
-        },
       },
     },
     response: {
@@ -49,13 +44,13 @@ export const cartSchemas = {
     summary: 'Remover item do carrinho',
     description:
       'Remove ou decrementa a quantidade de um produto do carrinho do cliente autenticado.',
-    tags: ['Cart'],
+    tags: ['Carts'],
+    security: [{ bearerAuth: [] }],
     body: {
       type: 'object',
       required: ['id_produto'],
       properties: {
         id_produto: { type: 'string', description: 'ID do produto a ser removido' },
-        quantidade: { type: 'number', minimum: 1, default: 1, description: 'Quantidade a remover' },
       },
     },
     response: {
@@ -97,7 +92,8 @@ export const cartSchemas = {
   clear: () => ({
     summary: 'Limpar carrinho',
     description: 'Remove todos os itens do carrinho do cliente autenticado.',
-    tags: ['Cart'],
+    tags: ['Carts'],
+    security: [{ bearerAuth: [] }],
     response: {
       200: {
         description: 'Carrinho limpo com sucesso',
@@ -113,6 +109,67 @@ export const cartSchemas = {
         properties: {
           success: { type: 'boolean' },
           message: { type: 'string' },
+        },
+      },
+    },
+  }),
+  getCartByClient: () => ({
+    summary: 'Obter carrinho do cliente autenticado',
+    description: 'Retorna o carrinho do cliente autenticado (id_cliente extraído do JWT).',
+    tags: ['Carts'],
+    security: [{ bearerAuth: [] }],
+    response: {
+      200: {
+        description: 'Carrinho encontrado',
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: {
+            type: 'object',
+            properties: {
+              id_cliente: { type: 'string' },
+              produtos: {
+                type: 'object',
+                additionalProperties: { type: 'integer' },
+              },
+            },
+          },
+        },
+      },
+      404: {
+        description: 'Carrinho não encontrado',
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          error: { type: 'string' },
+        },
+      },
+    },
+  }),
+
+  getAllCarts: () => ({
+    summary: 'Listar todos os carrinhos',
+    description: 'Retorna todos os carrinhos cadastrados no sistema.',
+    tags: ['Carts'],
+    response: {
+      200: {
+        description: 'Lista de carrinhos',
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id_cliente: { type: 'string' },
+                produtos: {
+                  type: 'object',
+                  additionalProperties: { type: 'integer' },
+                },
+              },
+            },
+          },
         },
       },
     },

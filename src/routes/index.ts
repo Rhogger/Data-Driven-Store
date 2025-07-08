@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
-import healthCheckRoutes from '@routes/health-check/health-check.routes';
-import databaseTestRoutes from '@routes/database-tests/database-tests.routes';
+import healthCheckRoutes from '@/routes/health_check/health_check.routes';
+import databaseTestRoutes from '@/routes/database_tests/database_tests.routes';
 import authRoutes from '@routes/auth/auth.routes';
 import addressRoutes from '@routes/addresses/address.routes';
 import categoryRoutes from '@routes/categories/category.routes';

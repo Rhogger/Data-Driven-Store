@@ -48,6 +48,7 @@ app.register(import('@fastify/swagger'), {
       { name: 'Addresses', description: 'Gerenciamento de endereços de clientes' },
       { name: 'Categories', description: 'Operações relacionadas a categorias' },
       { name: 'Products', description: 'Operações relacionadas a produtos' },
+      { name: 'Carts', description: 'Operações relacionadas a carrinhos de compras' },
       { name: 'Orders', description: 'Operações relacionadas a pedidos' },
       {
         name: 'Product Recommendations',

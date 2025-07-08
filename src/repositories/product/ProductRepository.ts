@@ -14,8 +14,8 @@ export class ProductRepository {
   private fastify: FastifyInstance;
   private neo4jDriver: Driver;
   private redis: Redis;
-  private readonly PRODUCT_CACHE_TTL = 300; // 5 minutos
-  private readonly RANKING_TTL = 604800; // 1 semana
+  private readonly PRODUCT_CACHE_TTL = 300;
+  private readonly RANKING_TTL = 604800;
 
   constructor(fastify: FastifyInstance, neo4jDriver: Driver, redis: Redis) {
     this.fastify = fastify;
@@ -23,21 +23,17 @@ export class ProductRepository {
     this.redis = redis;
   }
 
-  // MongoDB Collection
   private get mongoCollection() {
     return this.fastify.mongodb.db.collection('products');
   }
 
   // ===== MONGODB OPERATIONS =====
 
-  /**
-   * Criar produto no MongoDB
-   */
   async create(product: CreateProductInput): Promise<Product> {
     const productData = {
       ...product,
-      reservado: 0, // Campo calculado
-      disponivel: product.estoque || 0, // estoque - reservado
+      reservado: 0,
+      disponivel: product.estoque,
       created_at: new Date(),
       updated_at: new Date(),
     };
@@ -46,10 +42,9 @@ export class ProductRepository {
     const createdProduct = {
       ...productData,
       _id: result.insertedId,
-      id_produto: result.insertedId.toString(), // Mapear para id_produto
+      id_produto: result.insertedId.toString(),
     };
 
-    // Invalidar cache se existir
     if (result.insertedId) {
       await this.invalidateCache(result.insertedId.toString());
     }
@@ -57,33 +52,25 @@ export class ProductRepository {
     return createdProduct;
   }
 
-  /**
-   * Buscar produto por ID no MongoDB (com cache)
-   */
   async findById(id: string): Promise<Product | null> {
-    // Tentar buscar no cache primeiro
     const cached = await this.getFromCache(id);
     if (cached) {
       return this.normalizeProduct(cached);
     }
 
-    // Buscar no MongoDB
     const product = (await this.mongoCollection.findOne({
       _id: new ObjectId(id),
     })) as any;
 
     if (product) {
-      // Salvar no cache
-      await this.saveToCache(product as Product);
-      return this.normalizeProduct(product);
+      const normalized = this.normalizeProduct(product);
+      await this.saveToCache(normalized);
+      return normalized;
     }
 
     return null;
   }
 
-  /**
-   * Atualizar produto no MongoDB
-   */
   async update(id: string, update: UpdateProductInput): Promise<Product | null> {
     const updateData = {
       ...update,
@@ -95,35 +82,26 @@ export class ProductRepository {
     const updatedProduct = await this.findById(id);
 
     if (updatedProduct) {
-      // Atualizar cache
       await this.saveToCache(updatedProduct);
     }
 
     return updatedProduct;
   }
 
-  /**
-   * Listar produtos com paginação
-   */
   async findAll(limit = 20, skip = 0): Promise<Product[]> {
     const products = await this.mongoCollection.find({}).skip(skip).limit(limit).toArray();
 
-    // Garantir que todos os produtos tenham os campos obrigatórios
     return products.map((product: any) => ({
       ...product,
-      id_produto: product._id?.toString(), // Mapear para id_produto
+      id_produto: product._id?.toString(),
       reservado: product.reservado ?? 0,
       disponivel: product.disponivel ?? (product.estoque || 0),
     })) as Product[];
   }
 
-  /**
-   * Buscar produtos com estoque baixo
-   */
   async findLowStock(limiar: number): Promise<any[]> {
     const products = await this.mongoCollection.find({ estoque: { $lt: limiar } }).toArray();
 
-    // Mapear _id para id_produto e garantir campos obrigatórios
     return products.map((product: any) => ({
       ...product,
       id_produto: product._id?.toString(),
@@ -132,16 +110,11 @@ export class ProductRepository {
     }));
   }
 
-  /**
-   * Deletar produto
-   */
   async delete(id: string): Promise<boolean> {
     const result = await this.mongoCollection.deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount > 0) {
-      // Limpar cache
       await this.invalidateCache(id);
-      // Limpar visualizações
       await this.clearProductViews(id);
     }
 
@@ -150,9 +123,6 @@ export class ProductRepository {
 
   // ===== NEO4J OPERATIONS =====
 
-  /**
-   * Criar relacionamentos no Neo4j
-   */
   async createRelationships(productId: string, categoryId: string, brandId: string): Promise<void> {
     const session = this.neo4jDriver.session();
 
@@ -172,9 +142,6 @@ export class ProductRepository {
     }
   }
 
-  /**
-   * Buscar produtos relacionados
-   */
   async findRelatedProducts(productId: string, limit = 5): Promise<string[]> {
     const session = this.neo4jDriver.session();
 
@@ -198,9 +165,6 @@ export class ProductRepository {
 
   // ===== REDIS CACHE OPERATIONS =====
 
-  /**
-   * Buscar produto do cache
-   */
   private async getFromCache(id: string): Promise<ProductCacheData | null> {
     const cacheKey = `produto:${id}`;
     const cached = await this.redis.get(cacheKey);
@@ -208,7 +172,6 @@ export class ProductRepository {
     if (!cached) return null;
 
     try {
-      // Refresh TTL no acesso
       await this.redis.expire(cacheKey, this.PRODUCT_CACHE_TTL);
       return JSON.parse(cached) as ProductCacheData;
     } catch {
@@ -217,17 +180,17 @@ export class ProductRepository {
     }
   }
 
-  /**
-   * Salvar produto no cache
-   */
   private async saveToCache(product: Product): Promise<void> {
     const cacheData: ProductCacheData = {
-      id_produto: product._id?.toString() || product.id || '',
+      id_produto: product.id_produto || product._id?.toString() || product.id || '',
       nome: product.nome,
       descricao: product.descricao,
       preco: product.preco,
       marca: product.marca,
-      id_categoria: 1, // TODO: mapear categoria string para ID
+      categorias: product.categorias ?? [],
+      estoque: product.estoque ?? 0,
+      reservado: product.reservado ?? 0,
+      disponivel: product.disponivel ?? product.estoque ?? 0,
       atributos: product.atributos || {},
       avaliacoes: product.avaliacoes || [],
     };
@@ -236,23 +199,18 @@ export class ProductRepository {
     await this.redis.setex(cacheKey, this.PRODUCT_CACHE_TTL, JSON.stringify(cacheData));
   }
 
-  /**
-   * Invalidar cache do produto
-   */
   private async invalidateCache(id: string): Promise<void> {
     await this.redis.del(`produto:${id}`);
   }
 
-  /**
-   * Normaliza o produto para o formato do schema (id_produto, campos obrigatórios)
-   */
   private normalizeProduct(product: any): Product {
     return {
       ...product,
       id_produto: product.id_produto || product._id?.toString() || product.id || '',
       _id: product._id?.toString?.() || undefined,
+      estoque: product.estoque ?? 0,
       reservado: product.reservado ?? 0,
-      disponivel: product.disponivel ?? (product.estoque || 0),
+      disponivel: (product.estoque ?? 0) - (product.reservado ?? 0),
       categorias: Array.isArray(product.categorias)
         ? product.categorias
         : product.categorias
@@ -263,18 +221,12 @@ export class ProductRepository {
     };
   }
 
-  /**
-   * Converter cache para produto
-   */
   private cacheToProduct(cached: ProductCacheData): Product {
     return this.normalizeProduct(cached);
   }
 
   // ===== PRODUCT VIEWS OPERATIONS =====
 
-  /**
-   * Incrementar visualização de produto
-   */
   async incrementView(id_produto: string): Promise<number> {
     const viewKey = `visualizacoes:${id_produto}`;
     const rankingKey = 'ranking:produtos_mais_vistos';
@@ -286,18 +238,12 @@ export class ProductRepository {
     return newCount;
   }
 
-  /**
-   * Buscar visualizações de um produto
-   */
   async getViews(id_produto: string): Promise<number> {
     const viewKey = `visualizacoes:${id_produto}`;
     const views = await this.redis.get(viewKey);
     return views ? parseInt(views, 10) : 0;
   }
 
-  /**
-   * Buscar ranking dos produtos mais vistos
-   */
   async getTopViewed(limit = 10): Promise<ProductViewData[]> {
     const rankingKey = 'ranking:produtos_mais_vistos';
     const results = await this.redis.zrevrange(rankingKey, 0, limit - 1, 'WITHSCORES');
@@ -313,18 +259,12 @@ export class ProductRepository {
     return ranking;
   }
 
-  /**
-   * Buscar posição no ranking
-   */
   async getProductRank(id_produto: string): Promise<number | null> {
     const rankingKey = 'ranking:produtos_mais_vistos';
     const rank = await this.redis.zrevrank(rankingKey, id_produto);
     return rank !== null ? rank + 1 : null;
   }
 
-  /**
-   * Limpar visualizações de um produto
-   */
   private async clearProductViews(id_produto: string): Promise<void> {
     const viewKey = `visualizacoes:${id_produto}`;
     const rankingKey = 'ranking:produtos_mais_vistos';
