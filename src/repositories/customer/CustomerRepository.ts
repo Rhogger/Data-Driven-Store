@@ -59,6 +59,25 @@ export class CustomerRepository {
     return result.rows[0] || null;
   }
 
+  /**
+   * Buscar múltiplos clientes por um array de IDs.
+   * @param ids - Array de IDs de clientes.
+   * @returns Uma lista de clientes.
+   */
+  async findByIds(ids: number[]): Promise<CustomerRow[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const query = `
+      SELECT * FROM clientes
+      WHERE id_cliente = ANY($1::int[])
+    `;
+
+    const result = await this.pg.query<CustomerRow>(query, [ids]);
+    return result.rows;
+  }
+
   async validateLogin(email: string): Promise<CustomerLoginResult> {
     const customer = await this.findByEmail(email);
 

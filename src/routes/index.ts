@@ -27,6 +27,7 @@ import recommendationRoutes from '@routes/recommendations/recommendation.routes'
 // Customer Recommendations - TODO: Implementar
 
 // Analytics
+import userRoutes from '@routes/users/user.routes';
 import topCustomersReportRoutes from '@routes/reports/top-customers-report.routes';
 import analyticsRoutes from '@routes/analytics/analytics.routes';
 
@@ -56,6 +57,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   fastify.register(recommendationRoutes);
 
   // Analytics
+  fastify.register(userRoutes);
   fastify.register(topCustomersReportRoutes);
   fastify.register(analyticsRoutes);
 }
