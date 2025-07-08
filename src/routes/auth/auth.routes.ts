@@ -1,16 +1,10 @@
 import { FastifyInstance } from 'fastify';
-import { authSchemas } from '@routes/auth/schema/auth.schemas';
-import { loginHandler } from '@routes/auth/endpoints/login.routes';
-import { registerHandler } from '@routes/auth/endpoints/register.routes';
+import loginRoute from '@routes/auth/endpoints/login.routes';
+import registerRoute from '@routes/auth/endpoints/register.routes';
 
-export default async function authRoutes(fastify: FastifyInstance) {
-  fastify.post('/auth/login', {
-    schema: authSchemas.login,
-    handler: loginHandler,
-  });
+const authRoutes = async (fastify: FastifyInstance) => {
+  await fastify.register(loginRoute);
+  await fastify.register(registerRoute);
+};
 
-  fastify.post('/auth/register', {
-    schema: authSchemas.register,
-    handler: registerHandler,
-  });
-}
+export default authRoutes;
