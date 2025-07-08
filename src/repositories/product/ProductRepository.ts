@@ -176,6 +176,55 @@ export class ProductRepository {
     return this.mongoCollection.aggregate(pipeline).toArray();
   }
 
+  /**
+   * Buscar produtos por atributos e faixa de preço
+   */
+  async findByAttributesAndPriceRange(
+    filters: {
+      atributos?: Record<string, any>;
+      preco_min?: number;
+      preco_max?: number;
+    },
+    limit = 20,
+    skip = 0,
+  ): Promise<Product[]> {
+    const query: any = { $and: [] };
+
+    // Adicionar filtro de atributos
+    if (filters.atributos && Object.keys(filters.atributos).length > 0) {
+      for (const key in filters.atributos) {
+        const value = filters.atributos[key];
+        // Usar 'i' para case-insensitive se o valor for string
+        if (typeof value === 'string') {
+          query.$and.push({ [`atributos.${key}`]: { $regex: new RegExp(`^${value}$`, 'i') } });
+        } else {
+          query.$and.push({ [`atributos.${key}`]: value });
+        }
+      }
+    }
+
+    // Adicionar filtro de preço
+    const priceFilter: any = {};
+    if (filters.preco_min !== undefined) {
+      priceFilter.$gte = filters.preco_min;
+    }
+    if (filters.preco_max !== undefined) {
+      priceFilter.$lte = filters.preco_max;
+    }
+
+    if (Object.keys(priceFilter).length > 0) {
+      query.$and.push({ preco: priceFilter });
+    }
+
+    // Se não houver filtros, remover o $and vazio para buscar todos
+    if (query.$and.length === 0) {
+      delete query.$and;
+    }
+
+    const products = await this.mongoCollection.find(query).skip(skip).limit(limit).toArray();
+    return products.map((product: any) => this.normalizeProduct(product));
+  }
+
   // ===== NEO4J OPERATIONS =====
 
   /**

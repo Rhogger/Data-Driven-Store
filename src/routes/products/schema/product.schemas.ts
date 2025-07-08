@@ -260,4 +260,51 @@ export const productSchemas = {
       500: errorResponse(),
     },
   }),
+
+  search: () => ({
+    tags: ['Products'],
+    summary: 'Buscar produtos por atributos e preço',
+    description:
+      'Busca avançada de produtos. Permite filtrar por atributos específicos (e.g., processador, cor) e por uma faixa de preço. A busca de atributos é case-insensitive para strings.',
+    body: {
+      type: 'object',
+      properties: {
+        atributos: {
+          type: 'object',
+          description:
+            'Objeto com os atributos a serem filtrados. Ex: {"processador": "i7", "ram": "16GB"}',
+          additionalProperties: true,
+        },
+        preco_min: {
+          type: 'number',
+          minimum: 0,
+          description: 'Preço mínimo do produto',
+        },
+        preco_max: {
+          type: 'number',
+          minimum: 0,
+          description: 'Preço máximo do produto',
+        },
+        page: {
+          type: 'integer',
+          minimum: 1,
+          default: 1,
+          description: 'Número da página',
+        },
+        pageSize: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 100,
+          default: 20,
+          description: 'Itens por página',
+        },
+      },
+      additionalProperties: false,
+    },
+    response: {
+      200: paginatedResponse(productSchema),
+      400: errorResponse(),
+      500: errorResponse(),
+    },
+  }),
 };
