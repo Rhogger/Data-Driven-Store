@@ -18,19 +18,19 @@ const createProductRoutes: FastifyPluginAsync = async (fastify) => {
     Body: CreateProductInput;
   }>('/products', {
     schema: productSchemas.create(),
+    preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       try {
-        const requestBody = request.body as any; // Permitir detecção de campos extras
+        const { body } = request;
 
-        // Validar se campos não permitidos foram enviados
-        if ('reservado' in requestBody) {
+        if ('reservado' in body) {
           return reply.status(400).send({
             success: false,
             error: 'Campo "reservado" não é permitido na criação. É calculado automaticamente.',
           });
         }
 
-        if ('avaliacoes' in requestBody) {
+        if ('avaliacoes' in body) {
           return reply.status(400).send({
             success: false,
             error: 'Campo "avaliacoes" não é permitido na criação. É gerenciado automaticamente.',
@@ -39,7 +39,6 @@ const createProductRoutes: FastifyPluginAsync = async (fastify) => {
 
         const { preco, estoque, categorias } = request.body;
 
-        // Validações diretas na rota
         if (preco <= 0) {
           return reply.status(400).send({
             success: false,
@@ -61,7 +60,6 @@ const createProductRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        // Validar se todas as categorias existem
         const categoryRepository = new CategoryRepository(fastify);
         for (const categoryId of categorias) {
           const categoryExists = await categoryRepository.exists(categoryId);
@@ -75,13 +73,10 @@ const createProductRoutes: FastifyPluginAsync = async (fastify) => {
 
         const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
 
-        // Debug: log dos dados sendo enviados
         fastify.log.info({ body: request.body }, 'Dados para criar produto');
 
-        // O ProductRepository agora espera categorias como array de números
         const product = await productRepository.create(request.body);
 
-        // Debug: log do produto criado
         fastify.log.info({ product }, 'Produto criado');
 
         return reply.status(201).send({

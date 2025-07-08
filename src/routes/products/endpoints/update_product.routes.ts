@@ -17,12 +17,12 @@ const updateProductRoutes: FastifyPluginAsync = async (fastify) => {
     Body: UpdateProductInput;
   }>('/products/:id', {
     schema: productSchemas.update(),
+    preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       try {
-        const requestBody = request.body as any; // Permitir detecção de campos extras
+        const { body } = request;
 
-        // Validar se campos não permitidos foram enviados
-        if ('estoque' in requestBody) {
+        if ('estoque' in body) {
           return reply.status(400).send({
             success: false,
             error:
@@ -30,7 +30,7 @@ const updateProductRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        if ('reservado' in requestBody) {
+        if ('reservado' in body) {
           return reply.status(400).send({
             success: false,
             error:
@@ -38,7 +38,7 @@ const updateProductRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        if ('disponivel' in requestBody) {
+        if ('disponivel' in body) {
           return reply.status(400).send({
             success: false,
             error:
@@ -46,7 +46,7 @@ const updateProductRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        if ('avaliacoes' in requestBody) {
+        if ('avaliacoes' in body) {
           return reply.status(400).send({
             success: false,
             error:
@@ -56,7 +56,6 @@ const updateProductRoutes: FastifyPluginAsync = async (fastify) => {
 
         const { preco } = request.body;
 
-        // Validações diretas na rota
         if (preco !== undefined && preco <= 0) {
           return reply.status(400).send({
             success: false,

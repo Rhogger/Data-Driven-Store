@@ -88,9 +88,8 @@ export class ProductRepository {
     return updatedProduct;
   }
 
-  async findAll(limit = 20, skip = 0): Promise<Product[]> {
-    const products = await this.mongoCollection.find({}).skip(skip).limit(limit).toArray();
-
+  async findAll(): Promise<Product[]> {
+    const products = await this.mongoCollection.find({}).toArray();
     return products.map((product: any) => ({
       ...product,
       id_produto: product._id?.toString(),
@@ -192,7 +191,9 @@ export class ProductRepository {
       reservado: product.reservado ?? 0,
       disponivel: product.disponivel ?? product.estoque ?? 0,
       atributos: product.atributos || {},
-      avaliacoes: product.avaliacoes || [],
+      avaliacoes: Array.isArray(product.avaliacoes)
+        ? product.avaliacoes
+        : Object.values(product.avaliacoes || {}),
     };
 
     const cacheKey = `produto:${cacheData.id_produto}`;
@@ -217,12 +218,12 @@ export class ProductRepository {
           ? [product.categorias]
           : [],
       atributos: product.atributos || {},
-      avaliacoes: product.avaliacoes || {},
+      avaliacoes: Array.isArray(product.avaliacoes)
+        ? product.avaliacoes
+        : product.avaliacoes && typeof product.avaliacoes === 'object'
+          ? Object.values(product.avaliacoes)
+          : [],
     };
-  }
-
-  private cacheToProduct(cached: ProductCacheData): Product {
-    return this.normalizeProduct(cached);
   }
 
   // ===== PRODUCT VIEWS OPERATIONS =====

@@ -7,6 +7,7 @@ const getProductByIdRoutes: FastifyPluginAsync = async (fastify) => {
     Params: { id: string };
   }>('/products/:id', {
     schema: productSchemas.getById(),
+    preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       try {
         const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
@@ -19,7 +20,6 @@ const getProductByIdRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        // Debug: verificar produto antes de enviar resposta
         fastify.log.info({ product }, 'Produto antes de enviar resposta');
         fastify.log.info(
           { atributos: product.atributos },

@@ -1,6 +1,7 @@
 export const productRankingSchemas = {
-  getRanking: {
-    description: 'Buscar ranking dos produtos mais vistos',
+  getRanking: () => ({
+    summary: 'Buscar ranking dos produtos mais vistos',
+    description: 'Retorna o ranking dos produtos mais visualizados, com limite configurável.',
     tags: ['Products'],
     querystring: {
       type: 'object',
@@ -13,6 +14,7 @@ export const productRankingSchemas = {
     },
     response: {
       200: {
+        description: 'Ranking retornado com sucesso',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -36,23 +38,22 @@ export const productRankingSchemas = {
         },
       },
     },
-  },
+  }),
 
-  incrementView: {
-    description: 'Incrementar visualização de produto',
+  incrementView: () => ({
+    summary: 'Incrementar visualização de produto',
+    description: 'Incrementa o contador de visualizações de um produto.',
     tags: ['Products'],
     params: {
       type: 'object',
       required: ['id_produto'],
       properties: {
-        id_produto: {
-          type: 'string',
-          description: 'ID do produto',
-        },
+        id_produto: { type: 'string', description: 'ID do produto' },
       },
     },
     response: {
       200: {
+        description: 'Visualização incrementada com sucesso',
         type: 'object',
         properties: {
           success: { type: 'boolean' },
@@ -60,12 +61,22 @@ export const productRankingSchemas = {
             type: 'object',
             properties: {
               id_produto: { type: 'string' },
-              total_visualizacoes: { type: 'number' },
-              posicao_ranking: { type: 'number' },
+              total_visualizacoes: { type: 'integer' },
+              posicao_ranking: { type: 'integer' },
             },
+            required: ['id_produto', 'total_visualizacoes', 'posicao_ranking'],
           },
+        },
+        required: ['success', 'data'],
+      },
+      404: {
+        description: 'Produto não encontrado',
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          message: { type: 'string' },
         },
       },
     },
-  },
+  }),
 };
