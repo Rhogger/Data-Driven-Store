@@ -66,11 +66,11 @@ export const authSchemas = {
   register: () => ({
     summary: 'Cadastrar novo cliente',
     description:
-      'Registra um novo cliente no sistema. Valida CPF e dados obrigatórios antes de criar a conta.',
+      'Registra um novo cliente no sistema. Valida CPF e dados obrigatórios antes de criar a conta. As preferências devem ser informadas como um array de IDs de categorias, são obrigatórias e deve ser inserida pela menos 5.',
     tags: ['Auth'],
     body: {
       type: 'object',
-      required: ['nome', 'email', 'cpf', 'telefone'],
+      required: ['nome', 'email', 'cpf', 'telefone', 'preferencias'],
       properties: {
         nome: {
           type: 'string',
@@ -90,7 +90,15 @@ export const authSchemas = {
           type: 'string',
           description: 'Telefone do cliente (10-11 dígitos)',
         },
+        preferencias: {
+          type: 'array',
+          minItems: 5,
+          items: { type: 'integer', minimum: 1 },
+          description:
+            'Array de IDs de categorias preferidas do cliente. Obrigatório informar pelo menos 5 categorias. Cada valor deve ser um inteiro positivo.',
+        },
       },
+      additionalProperties: false,
     },
     response: {
       201: {

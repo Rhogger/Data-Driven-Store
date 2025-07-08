@@ -12,7 +12,6 @@ import {
   CreateNodeResult,
   CreateRelationshipResult,
 } from './CustomerInterfaces';
-// import bcrypt from 'bcrypt'; // TODO: Instalar bcrypt
 
 export class CustomerRepository {
   private pg: Pool;
@@ -83,6 +82,11 @@ export class CustomerRepository {
 
   async existsByEmail(email: string): Promise<boolean> {
     const result = await this.pg.query('SELECT 1 FROM clientes WHERE email = $1', [email]);
+    return result.rows.length > 0;
+  }
+
+  async existsByTelefone(telefone: string): Promise<boolean> {
+    const result = await this.pg.query('SELECT 1 FROM clientes WHERE telefone = $1', [telefone]);
     return result.rows.length > 0;
   }
 
