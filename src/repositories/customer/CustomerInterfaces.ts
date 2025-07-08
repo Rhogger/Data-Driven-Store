@@ -8,7 +8,6 @@ export interface CustomerInput {
   email: string;
   cpf: string;
   telefone: string;
-  password: string;
 }
 
 export interface CustomerRow {
@@ -17,7 +16,6 @@ export interface CustomerRow {
   email: string;
   cpf: string;
   telefone: string;
-  password: string;
   created_at: Date;
   updated_at: Date;
 }

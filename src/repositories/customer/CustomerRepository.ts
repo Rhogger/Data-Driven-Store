@@ -28,12 +28,9 @@ export class CustomerRepository {
   // ============================================================================
 
   async create(customerData: CustomerInput): Promise<CustomerRow> {
-    // TODO: Implementar hash de senha com bcrypt
-    const hashedPassword = customerData.password; // Temporário até instalar bcrypt
-
     const sql = `
-      INSERT INTO clientes (nome, email, cpf, telefone, password)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO clientes (nome, email, cpf, telefone)
+      VALUES ($1, $2, $3, $4)
       RETURNING *
     `;
 
@@ -42,7 +39,6 @@ export class CustomerRepository {
       customerData.email,
       customerData.cpf,
       customerData.telefone,
-      hashedPassword,
     ]);
 
     return result.rows[0];
@@ -63,23 +59,13 @@ export class CustomerRepository {
     return result.rows[0] || null;
   }
 
-  async validateLogin(email: string, password: string): Promise<CustomerLoginResult> {
+  async validateLogin(email: string): Promise<CustomerLoginResult> {
     const customer = await this.findByEmail(email);
 
     if (!customer) {
       return {
         success: false,
         message: 'Cliente não encontrado',
-      };
-    }
-
-    // TODO: Implementar validação de senha com bcrypt
-    const isValidPassword = password === customer.password; // Temporário até instalar bcrypt
-
-    if (!isValidPassword) {
-      return {
-        success: false,
-        message: 'Senha inválida',
       };
     }
 

@@ -73,7 +73,6 @@ export async function registerHandler(request: FastifyRequest, reply: FastifyRep
       email: email.toLowerCase().trim(),
       cpf: cpfClean,
       telefone: phoneClean,
-      password: 'temp123', // TODO: Receber senha do endpoint
     };
 
     // Criar cliente

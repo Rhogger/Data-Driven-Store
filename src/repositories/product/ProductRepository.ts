@@ -64,7 +64,7 @@ export class ProductRepository {
     // Tentar buscar no cache primeiro
     const cached = await this.getFromCache(id);
     if (cached) {
-      return this.cacheToProduct(cached);
+      return this.normalizeProduct(cached);
     }
 
     // Buscar no MongoDB
@@ -73,16 +73,12 @@ export class ProductRepository {
     })) as any;
 
     if (product) {
-      // Garantir que tenha os campos obrigatórios
-      product.reservado = product.reservado ?? 0;
-      product.disponivel = product.disponivel ?? (product.estoque || 0);
-      product.id_produto = product._id?.toString(); // Mapear para id_produto
-
       // Salvar no cache
       await this.saveToCache(product as Product);
+      return this.normalizeProduct(product);
     }
 
-    return product as Product | null;
+    return null;
   }
 
   /**
@@ -248,19 +244,30 @@ export class ProductRepository {
   }
 
   /**
+   * Normaliza o produto para o formato do schema (id_produto, campos obrigatórios)
+   */
+  private normalizeProduct(product: any): Product {
+    return {
+      ...product,
+      id_produto: product.id_produto || product._id?.toString() || product.id || '',
+      _id: product._id?.toString?.() || undefined,
+      reservado: product.reservado ?? 0,
+      disponivel: product.disponivel ?? (product.estoque || 0),
+      categorias: Array.isArray(product.categorias)
+        ? product.categorias
+        : product.categorias
+          ? [product.categorias]
+          : [],
+      atributos: product.atributos || {},
+      avaliacoes: product.avaliacoes || {},
+    };
+  }
+
+  /**
    * Converter cache para produto
    */
   private cacheToProduct(cached: ProductCacheData): Product {
-    return {
-      id: cached.id_produto,
-      nome: cached.nome,
-      descricao: cached.descricao,
-      preco: cached.preco,
-      marca: cached.marca,
-      categorias: cached.id_categoria ? [cached.id_categoria] : [],
-      atributos: cached.atributos,
-      avaliacoes: cached.avaliacoes,
-    };
+    return this.normalizeProduct(cached);
   }
 
   // ===== PRODUCT VIEWS OPERATIONS =====
