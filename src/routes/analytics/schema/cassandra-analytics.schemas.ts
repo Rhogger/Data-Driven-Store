@@ -1,5 +1,4 @@
 export const cassandraAnalyticsSchemas = {
-  // 1. Funil de conversão
   getConversionFunnel: () => ({
     tags: ['Reports'],
     summary: 'Consulta de funil de conversão',
@@ -38,7 +37,6 @@ export const cassandraAnalyticsSchemas = {
     },
   }),
 
-  // 2. Visualizações por dia na última semana
   getWeeklyViews: () => ({
     tags: ['Reports'],
     summary: 'Visualizações por dia na última semana',
@@ -74,7 +72,6 @@ export const cassandraAnalyticsSchemas = {
     },
   }),
 
-  // 3. Top 10 termos de busca
   getTopSearchTerms: () => ({
     tags: ['Reports'],
     summary: 'Top 10 termos de busca mais utilizados',
@@ -107,7 +104,6 @@ export const cassandraAnalyticsSchemas = {
     },
   }),
 
-  // 4. Taxa de cliques (CTR) de campanha
   getCampaignCTR: () => ({
     tags: ['Reports'],
     summary: 'Taxa de cliques (CTR) de uma campanha',
@@ -146,7 +142,6 @@ export const cassandraAnalyticsSchemas = {
     },
   }),
 
-  // 5. Usuários por UTM source que compraram
   getUsersByUtmSource: () => ({
     tags: ['Reports'],
     summary: 'Usuários de UTM source que realizaram compra',

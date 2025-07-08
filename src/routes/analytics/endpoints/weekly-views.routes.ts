@@ -6,7 +6,6 @@ export async function getWeeklyViewsHandler(request: FastifyRequest, reply: Fast
     const cassandraClient = request.server.cassandra;
     const productViewsRepo = new ProductViewsAggregatedRepository(cassandraClient);
 
-    // Últimos 7 dias
     const hoje = new Date();
     const setesDiasAtras = new Date();
     setesDiasAtras.setDate(hoje.getDate() - 7);
@@ -14,7 +13,6 @@ export async function getWeeklyViewsHandler(request: FastifyRequest, reply: Fast
     const visualizacoesPorDia = [];
     let totalVisualizacoes = 0;
 
-    // Buscar visualizações para cada dia dos últimos 7 dias
     for (let i = 0; i < 7; i++) {
       const data = new Date();
       data.setDate(hoje.getDate() - i);
@@ -38,7 +36,7 @@ export async function getWeeklyViewsHandler(request: FastifyRequest, reply: Fast
       data: {
         periodo: `${setesDiasAtras.toISOString().split('T')[0]} até ${hoje.toISOString().split('T')[0]}`,
         total_visualizacoes: totalVisualizacoes,
-        visualizacoes_por_dia: visualizacoesPorDia.reverse(), // Ordem cronológica
+        visualizacoes_por_dia: visualizacoesPorDia.reverse(),
       },
     });
   } catch (error: any) {

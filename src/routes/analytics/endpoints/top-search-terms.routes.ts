@@ -6,7 +6,6 @@ export async function getTopSearchTermsHandler(request: FastifyRequest, reply: F
     const cassandraClient = request.server.cassandra;
     const searchTermsRepo = new SearchTermsAggregatedRepository(cassandraClient);
 
-    // Buscar termos dos últimos 30 dias
     const termosMap = new Map<string, number>();
     const hoje = new Date();
 
@@ -28,7 +27,6 @@ export async function getTopSearchTermsHandler(request: FastifyRequest, reply: F
       });
     }
 
-    // Converter para array e ordenar
     const termosOrdenados = Array.from(termosMap.entries())
       .map(([termo, total]) => ({ termo_busca: termo, total_buscas: total }))
       .sort((a, b) => b.total_buscas - a.total_buscas)

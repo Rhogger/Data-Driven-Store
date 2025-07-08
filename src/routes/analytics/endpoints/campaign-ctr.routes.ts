@@ -17,11 +17,9 @@ export async function getCampaignCTRHandler(
 
     const { origemCampanha } = request.params;
 
-    // Buscar compras da campanha
     const compras = await purchasesRepo.findByCampaignSource(origemCampanha);
     const totalCliques = compras.length;
 
-    // Buscar visualizações da campanha nos últimos 30 dias
     let totalVisualizacoes = 0;
     const hoje = new Date();
 
@@ -38,7 +36,6 @@ export async function getCampaignCTRHandler(
       totalVisualizacoes += visualizacoesCampanha.length;
     }
 
-    // Calcular CTR
     const ctrPercentual = totalVisualizacoes > 0 ? (totalCliques / totalVisualizacoes) * 100 : 0;
 
     const dataInicio = new Date();
