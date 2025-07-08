@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS eventos_por_data (
     data_evento DATE,
     timestamp_evento TIMESTAMP,
     id_evento UUID,
-    tipo_evento TEXT,             -- 'visualizacao', 'clique', etc.
-    origem_campanha TEXT,         -- Para CTR de campanha
+    tipo_evento TEXT,
+    origem_campanha TEXT,
     PRIMARY KEY (data_evento, timestamp_evento, id_evento)
 );
 
