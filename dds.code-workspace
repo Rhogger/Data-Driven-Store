@@ -10,7 +10,7 @@
     "explorer.fileNesting.patterns": {
       "package.json": ".npmrc, .pnpmrc, package-lock.json, pnpm-lock.yaml, .gitignore, .gitattributes, .tool-versions, tsconfig.json, docker-compose.yml, Dockerfile, dds.code-workspace, README.md", // Agrupa lockfiles e configs de pacote
       "eslint.config.mjs": ".prettierrc.json, .prettierignore, .editorconfig",
-      "start.sh": "start-dev.sh, reset.sh, build.sh, run.sh, init-cassandra.sh, fix-permissions.sh, wait-for-databases.sh, seed.sh", // Agrupa arquivos Docker
+      "start.sh": "start-dev.sh, reset.sh, build.sh, run.sh, init-cassandra.sh, fix-permissions.sh, wait-for-databases.sh, seed.sh, docker-entrypoint-cassandra.sh",
     },
 
     "editor.defaultFormatter": "esbenp.prettier-vscode",

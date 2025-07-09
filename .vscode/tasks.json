@@ -114,9 +114,104 @@
       }
     },
     {
-      "label": "🔥 Reset Docker Environment",
+      "label": "🔥 Reset All Docker Environment",
       "type": "shell",
       "command": "./reset.sh",
+      "group": "test",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": true
+      },
+      "options": {
+        "statusbar": { "label": "Reset" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
+      }
+    },
+    {
+      "label": "🔥 Reset Postgres Docker Environment",
+      "type": "shell",
+      "command": "./reset.sh postgres",
+      "group": "test",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": true
+      },
+      "options": {
+        "statusbar": { "label": "Reset" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
+      }
+    },
+    {
+      "label": "🔥 Reset MongoDB Docker Environment",
+      "type": "shell",
+      "command": "./reset.sh mongo",
+      "group": "test",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": true
+      },
+      "options": {
+        "statusbar": { "label": "Reset" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
+      }
+    },
+    {
+      "label": "🔥 Reset Redis Docker Environment",
+      "type": "shell",
+      "command": "./reset.sh redis",
+      "group": "test",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": true
+      },
+      "options": {
+        "statusbar": { "label": "Reset" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
+      }
+    },
+    {
+      "label": "🔥 Reset Neo4j Docker Environment",
+      "type": "shell",
+      "command": "./reset.sh neo4j",
+      "group": "test",
+      "isBackground": false,
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "new",
+        "showReuseMessage": true,
+        "clear": true
+      },
+      "options": {
+        "statusbar": { "label": "Reset" },
+        "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
+      }
+    },
+    {
+      "label": "🔥 Reset Cassandra Docker Environment",
+      "type": "shell",
+      "command": "./reset.sh cassandra",
       "group": "test",
       "isBackground": false,
       "presentation": {

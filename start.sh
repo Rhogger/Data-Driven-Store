@@ -46,13 +46,7 @@ if [ $? -ne 0 ]; then
 fi
 echo "✅ Serviços iniciados."
 
-# 4. Popular os bancos de dados
-echo "🌱 4. Populando bancos de dados..."
-./seed.sh
-if [ $? -ne 0 ]; then
-    echo "❌ ERRO: Falha ao popular os bancos de dados."
-    exit 1
-fi
+
 
 # --- MENSAGEM FINAL ---
 echo ""

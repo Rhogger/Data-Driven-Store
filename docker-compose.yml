@@ -71,7 +71,7 @@ services:
       - '9042:9042'
     volumes:
       - cassandra_data:/var/lib/cassandra
-      - ./db/cassandra:/docker-entrypoint-initdb.d
+      - ./db/cassandra:/docker-entrypoint-initdb.d:ro
     environment:
       - CASSANDRA_CLUSTER_NAME=TestCluster
       - CASSANDRA_DC=datacenter1
@@ -150,7 +150,7 @@ services:
 
     healthcheck:
       # Tenta acessar o endpoint de documentação para verificar se a API está online
-      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-3000}/docs"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:${APP_PORT:-3000}/docs']
       interval: 15s
       timeout: 5s
       retries: 5
