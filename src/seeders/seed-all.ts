@@ -538,6 +538,58 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
       { purchases: purchaseRelations },
     );
 
+    // Clientes -> Produtos (VISUALIZOU)
+    // Simula visualizações aleatórias para cada cliente em alguns produtos
+    const visualizouRelations = [];
+    for (const cli of clients) {
+      // Cada cliente visualiza de 2 a 6 produtos aleatórios
+      const numViews = Math.floor(Math.random() * 5) + 2;
+      const shuffledProducts = [...products].sort(() => 0.5 - Math.random());
+      for (let i = 0; i < numViews; i++) {
+        const prod = shuffledProducts[i];
+        visualizouRelations.push({
+          id_cliente: neo4j.int(cli.id_cliente),
+          id_produto: prod._id.toHexString(),
+          data: new Date(
+            Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+        });
+      }
+    }
+    await session.run(
+      `UNWIND $views as view
+       MATCH (cli:Cliente {id_cliente: view.id_cliente})
+       MATCH (p:Produto {id_produto: view.id_produto})
+       CREATE (cli)-[:VISUALIZOU {data: datetime(view.data)}]->(p)`,
+      { views: visualizouRelations },
+    );
+
+    // Clientes -> Produtos (AVALIOU)
+    // Para cada avaliação em cada produto, cria a relação AVALIOU
+    const avaliouRelations = [];
+    for (const prod of products) {
+      if (Array.isArray(prod.avaliacoes)) {
+        for (const av of prod.avaliacoes) {
+          avaliouRelations.push({
+            id_cliente: neo4j.int(av.id_cliente),
+            id_produto: prod._id.toHexString(),
+            nota: av.nota,
+            comentario: av.comentario || '',
+            data: av.data_avaliacao.toISOString(),
+          });
+        }
+      }
+    }
+    if (avaliouRelations.length > 0) {
+      await session.run(
+        `UNWIND $avaliacoes as av
+         MATCH (cli:Cliente {id_cliente: av.id_cliente})
+         MATCH (p:Produto {id_produto: av.id_produto})
+         CREATE (cli)-[:AVALIOU {nota: av.nota, comentario: av.comentario, data: datetime(av.data)}]->(p)`,
+        { avaliacoes: avaliouRelations },
+      );
+    }
+
     console.log('✅ [Neo4j] Seed do grafo concluído com sucesso.');
   } finally {
     await session.close();
