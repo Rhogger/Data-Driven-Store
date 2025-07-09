@@ -102,6 +102,32 @@ export const reportSchemas = {
       500: errorResponse(),
     },
   }),
+
+  topCustomerReport: () => ({
+    tags: ['Reports'],
+    security: [{ bearerAuth: [] }],
+    summary: 'Top 5 clientes com maior faturamento nos últimos 6 meses',
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id_cliente: { type: 'integer' },
+                nome: { type: 'string' },
+                email: { type: 'string' },
+                faturamento_total: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    },
+  }),
 };
 
 const customerSchema = {
