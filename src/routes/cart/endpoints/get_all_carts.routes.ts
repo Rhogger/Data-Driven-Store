@@ -10,7 +10,6 @@ const getAllCartsRoute = async (fastify: FastifyInstance) => {
 
       const cartRepo = new CartRepository(fastify.redis);
       const carts = [];
-
       for (const key of keys) {
         const id_cliente = key.replace('carrinho:', '');
         const cart = await cartRepo.findByClientId(id_cliente);
