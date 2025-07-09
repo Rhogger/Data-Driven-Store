@@ -236,6 +236,7 @@ export const productSchemas = {
 
   getAveragePriceByBrand: () => ({
     tags: ['Products'],
+    security: [{ bearerAuth: [] }],
     summary: 'Calcular média de preço por marca',
     description:
       'Usa o Aggregation Framework do MongoDB para calcular o preço médio de produtos, agrupado por marca.',
@@ -261,16 +262,12 @@ export const productSchemas = {
     security: [{ bearerAuth: [] }],
     summary: 'Buscar produtos por atributos e preço',
     description:
-      'Busca avançada de produtos. Permite filtrar por atributos específicos (e.g., processador, cor) e por uma faixa de preço. A busca de atributos é case-insensitive para strings.',
-    body: {
+      'Busca avançada de produtos. Permite filtrar por atributos específicos (via query params dinâmicos) e por uma faixa de preço. A busca de atributos é case-insensitive para strings.',
+    querystring: {
       type: 'object',
+      description:
+        'Busca produtos por atributos dinâmicos. O campo atributos deve ser um JSON válido passado como string (ex: {"processador": "i5", "ram": "16GB"}). Exemplo de uso: /api/products/search?preco_min=0&preco_max=1000&atributos={"processador":"i7","ram":"16GB"}',
       properties: {
-        atributos: {
-          type: 'object',
-          description:
-            'Objeto com os atributos a serem filtrados. Ex: {"processador": "i7", "ram": "16GB"}',
-          additionalProperties: true,
-        },
         preco_min: {
           type: 'number',
           minimum: 0,
@@ -281,8 +278,13 @@ export const productSchemas = {
           minimum: 0,
           description: 'Preço máximo do produto',
         },
+        atributos: {
+          type: 'string',
+          description:
+            'Atributos dinâmicos do produto como string JSON (ex: {"processador": "i5", "ram": "16GB"})',
+        },
       },
-      additionalProperties: false,
+      required: [],
     },
     response: {
       200: successResponse({

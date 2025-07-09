@@ -11,7 +11,6 @@ export const productRecommendationSchemas = {
         produtoId: {
           type: 'string',
           description: 'ID do produto para encontrar recomendações',
-          // // example: 'PROD001',
         },
       },
       required: ['produtoId'],
@@ -626,6 +625,7 @@ export const productRecommendationSchemas = {
 
   categoryBasedRecommendations: () => ({
     tags: ['Customer Recommendations'],
+    security: [{ bearerAuth: [] }],
     summary: 'Recomendações baseadas em categorias visualizadas',
     description:
       'Recomenda produtos de categorias que um cliente visualizou, mas das quais ainda não comprou',
