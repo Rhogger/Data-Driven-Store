@@ -64,9 +64,8 @@ export const productRankingSchemas = {
             properties: {
               id_produto: { type: 'string' },
               total_visualizacoes: { type: 'integer' },
-              posicao_ranking: { type: 'integer' },
             },
-            required: ['id_produto', 'total_visualizacoes', 'posicao_ranking'],
+            required: ['id_produto', 'total_visualizacoes'],
           },
         },
         required: ['success', 'data'],

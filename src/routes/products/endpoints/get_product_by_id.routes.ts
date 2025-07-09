@@ -20,6 +20,14 @@ const getProductByIdRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
+        const userId = request.user?.id_cliente || request.user?.id;
+        const productId = (product.id_produto || product._id?.toString()) as string;
+
+        await productRepository.incrementView(productId);
+
+        if (userId)
+          await productRepository.createCustomerViewedProductRelation(String(userId), productId);
+
         fastify.log.info({ product }, 'Produto antes de enviar resposta');
         fastify.log.info(
           { atributos: product.atributos },

@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ProductViewRepository } from '@/repositories/product-view/ProductViewRepository';
+import { ProductRepository } from '@/repositories/product/ProductRepository';
 import { productRankingSchemas } from '@routes/products/schema/product-ranking.schemas';
 
 interface RankingQuery {
@@ -28,8 +28,8 @@ const getProductRankingRoute: FastifyPluginAsync = async (fastify) => {
           if (limitNumber > 100) limitNumber = 100;
         }
 
-        const productViewRepo = new ProductViewRepository((request.server as any).redis);
-        const ranking = await productViewRepo.getTopViewed(limitNumber);
+        const productRepo = new ProductRepository(fastify, fastify.neo4j, request.server.redis);
+        const ranking = await productRepo.getTopViewed(limitNumber);
 
         return reply.send({
           success: true,

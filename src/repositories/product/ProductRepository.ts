@@ -265,11 +265,32 @@ export class ProductRepository {
         MERGE (p:Product {id: $productId})
         MERGE (c:Category {id: $categoryId})
         MERGE (b:Brand {id: $brandId})
-        MERGE (p)-[:BELONGS_TO]->(c)
-        MERGE (p)-[:MADE_BY]->(b)
+        MERGE (p)-[:PERTENCE_A]->(c)
+        MERGE (p)-[:PRODUZIDO_POR]->(b)
         `,
         { productId, categoryId, brandId },
       );
+    } finally {
+      await session.close();
+    }
+  }
+
+  async createCustomerViewedProductRelation(userId: string, id_produto: string): Promise<void> {
+    const session = this.neo4jDriver.session();
+    try {
+      await session.run(
+        `
+          MERGE (c:Customer {id: $userId})
+          MERGE (p:Product {id: $productId})
+          MERGE (c)-[:VISUALIZOU]->(p)
+        `,
+        {
+          userId: String(userId),
+          productId: String(id_produto),
+        },
+      );
+    } catch (err) {
+      this.fastify.log.warn({ err }, 'Erro ao criar relacionamento de visualização no Neo4j');
     } finally {
       await session.close();
     }
@@ -281,8 +302,8 @@ export class ProductRepository {
     try {
       const result = await session.run(
         `
-        MATCH (p:Product {id: $productId})-[:BELONGS_TO]->(c:Category)
-        MATCH (related:Product)-[:BELONGS_TO]->(c)
+        MATCH (p:Product {id: $productId})-[:PERTENCE_A]->(c:Category)
+        MATCH (related:Product)-[:PERTENCE_A]->(c)
         WHERE related.id <> $productId
         RETURN related.id as id
         LIMIT $limit
@@ -333,12 +354,7 @@ export class ProductRepository {
 
   async incrementView(id_produto: string): Promise<number> {
     const viewKey = `visualizacoes:${id_produto}`;
-    const rankingKey = 'ranking:produtos_mais_vistos';
-
     const newCount = await this.redis.incr(viewKey);
-    await this.redis.zadd(rankingKey, newCount, id_produto);
-    await this.redis.expire(rankingKey, this.RANKING_TTL);
-
     return newCount;
   }
 
@@ -349,31 +365,27 @@ export class ProductRepository {
   }
 
   async getTopViewed(limit = 10): Promise<ProductViewData[]> {
-    const rankingKey = 'ranking:produtos_mais_vistos';
-    const results = await this.redis.zrevrange(rankingKey, 0, limit - 1, 'WITHSCORES');
-
-    const ranking: ProductViewData[] = [];
-    for (let i = 0; i < results.length; i += 2) {
-      ranking.push({
-        id_produto: results[i],
-        visualizacoes: parseInt(results[i + 1], 10),
+    const keys = await this.redis.keys('visualizacoes:*');
+    const viewsList: ProductViewData[] = [];
+    for (const key of keys) {
+      const id_produto = key.replace('visualizacoes:', '');
+      const views = await this.redis.get(key);
+      viewsList.push({
+        id_produto,
+        visualizacoes: views ? parseInt(views, 10) : 0,
       });
     }
-
-    return ranking;
+    viewsList.sort((a, b) => b.visualizacoes - a.visualizacoes);
+    return viewsList.slice(0, limit);
   }
 
-  async getProductRank(id_produto: string): Promise<number | null> {
-    const rankingKey = 'ranking:produtos_mais_vistos';
-    const rank = await this.redis.zrevrank(rankingKey, id_produto);
-    return rank !== null ? rank + 1 : null;
+  async getProductRank(_id_produto: string): Promise<number | null> {
+    // Não há mais ranking, sempre retorna null
+    return null;
   }
 
   private async clearProductViews(id_produto: string): Promise<void> {
     const viewKey = `visualizacoes:${id_produto}`;
-    const rankingKey = 'ranking:produtos_mais_vistos';
-
     await this.redis.del(viewKey);
-    await this.redis.zrem(rankingKey, id_produto);
   }
 }

@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ProductViewRepository } from '@/repositories/product-view/ProductViewRepository';
+import { ProductRepository } from '@/repositories/product/ProductRepository';
 import { productRankingSchemas } from '@routes/products/schema/product-ranking.schemas';
 
 const incrementProductViewRoute: FastifyPluginAsync = async (fastify) => {
@@ -16,16 +16,15 @@ const incrementProductViewRoute: FastifyPluginAsync = async (fastify) => {
             error: 'ID do produto é obrigatório',
           });
 
-        const productViewRepo = new ProductViewRepository((request.server as any).redis);
-        const newViewCount = await productViewRepo.incrementView(id_produto);
-        const currentRank = await productViewRepo.getProductRank(id_produto);
+        const productRepo = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+        await productRepo.incrementView(id_produto);
+        const totalVisualizacoes = await productRepo.getViews(id_produto);
 
         return reply.send({
           success: true,
           data: {
             id_produto,
-            total_visualizacoes: newViewCount,
-            posicao_ranking: currentRank,
+            total_visualizacoes: totalVisualizacoes,
           },
         });
       } catch (error: any) {
