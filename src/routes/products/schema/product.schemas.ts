@@ -266,7 +266,7 @@ export const productSchemas = {
     querystring: {
       type: 'object',
       description:
-        'Busca produtos por atributos dinâmicos. O campo atributos deve ser um JSON válido passado como string (ex: {"processador": "i5", "ram": "16GB"}). Exemplo de uso: /api/products/search?preco_min=0&preco_max=1000&atributos={"processador":"i7","ram":"16GB"}',
+        'Busca produtos por atributos dinâmicos. O campo atributos deve ser um JSON válido passado como string (ex: {"processador":"i7","ram":"16GB","armazenamento":"1TB SSD","cor":"Prata"}). Exemplo de uso: /api/products/search?preco_min=0&preco_max=1000&atributos={"processador":"i7","ram":"16GB"}',
       properties: {
         preco_min: {
           type: 'number',
@@ -281,7 +281,7 @@ export const productSchemas = {
         atributos: {
           type: 'string',
           description:
-            'Atributos dinâmicos do produto como string JSON (ex: {"processador": "i5", "ram": "16GB"})',
+            'Atributos dinâmicos do produto como string JSON (ex: {"processador":"i7","ram":"16GB","armazenamento":"1TB SSD","cor":"Prata"})',
         },
       },
       required: [],
