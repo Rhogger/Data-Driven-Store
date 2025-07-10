@@ -48,9 +48,8 @@ const orderSchema = {
 // Schema para criação de pedido
 const createOrderBodySchema = {
   type: 'object',
-  required: ['id_cliente', 'id_endereco', 'itens'],
+  required: ['id_endereco', 'itens'],
   properties: {
-    id_cliente: { type: 'integer', minimum: 1, description: 'ID do cliente' },
     id_endereco: { type: 'integer', minimum: 1, description: 'ID do endereço de entrega' },
     itens: {
       type: 'array',

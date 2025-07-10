@@ -2,18 +2,13 @@ import { FastifyPluginAsync } from 'fastify';
 import { ProductRepository } from '@repositories/product/ProductRepository';
 import { productSchemas } from '@routes/products/schema/product.schemas';
 
-interface ListProductsQuery {
-  page?: string;
-  pageSize?: string;
-}
-
 const listProductsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/products', {
     schema: productSchemas.list(),
     preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       try {
-        const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+        const productRepository = new ProductRepository(fastify);
         const products = await productRepository.findAll();
         return reply.send({
           success: true,

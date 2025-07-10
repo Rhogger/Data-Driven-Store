@@ -11,7 +11,6 @@ export interface CategoryRow {
 
 export interface CategoryCreateInput {
   nome: string;
-  id_categoria_pai?: number;
 }
 
 // ============================================================================

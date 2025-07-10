@@ -16,7 +16,7 @@ const incrementProductViewRoute: FastifyPluginAsync = async (fastify) => {
             error: 'ID do produto é obrigatório',
           });
 
-        const productRepo = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+        const productRepo = new ProductRepository(fastify);
         await productRepo.incrementView(id_produto);
         const totalVisualizacoes = await productRepo.getViews(id_produto);
 

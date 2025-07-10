@@ -39,7 +39,7 @@ const searchProductsRoutes: FastifyPluginAsync = async (fastify) => {
           }
         }
 
-        const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+        const productRepository = new ProductRepository(fastify);
         const products = await productRepository.findByAttributesAndPriceRange({
           atributos: atributosObj,
           preco_min: precoMinNum,

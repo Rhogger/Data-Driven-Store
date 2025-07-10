@@ -13,9 +13,6 @@ export class RecommendationRepository {
   // Product Recommendations
   // ============================================================================
 
-  /**
-   * Produtos frequentemente comprados juntos
-   */
   async getFrequentlyBoughtTogether(
     id_produto: string,
     limit: number = 5,
@@ -24,22 +21,18 @@ export class RecommendationRepository {
 
     try {
       const query = `
-        MATCH (p1:Produto {id_produto: $id_produto})<-[:COMPROU]-(c:Cliente)-[:COMPROU]->(p2:Produto)
+        MATCH (p1:Produto {id_produto: '${id_produto}'})<-[:COMPROU]-(c:Cliente)-[:COMPROU]->(p2:Produto)
         WHERE p1.id_produto <> p2.id_produto
         RETURN p2.id_produto as id_produto,
-               p2.nome as nome,
-               p2.preco as preco,
                count(*) as frequencia
         ORDER BY frequencia DESC
-        LIMIT $limit
+        LIMIT ${limit}
       `;
 
       const result = await session.run(query, { id_produto, limit });
 
       return result.records.map((record) => ({
         id_produto: record.get('id_produto'),
-        nome: record.get('nome'),
-        preco: record.get('preco'),
         score: record.get('frequencia').toNumber(),
         motivo_recomendacao: 'Frequentemente comprados juntos',
       }));
@@ -50,57 +43,48 @@ export class RecommendationRepository {
     }
   }
 
-  /**
-   * Recomendações baseadas em categoria
-   */
   async getCategoryBasedRecommendations(
-    clienteId: string,
+    clienteId: number,
     limite: number = 10,
     diasAnalise: number = 30,
   ): Promise<RecommendedProduct[]> {
     const session: Session = this.neo4jDriver.session();
 
+    // eslint-disable-next-line no-console
+    console.log('[getCategoryBasedRecommendations] called with:', clienteId, limite, diasAnalise);
+
     try {
       const query = `
-        // Encontra produtos que o cliente já comprou
-        MATCH (cliente:Cliente {id_cliente: $clienteId})-[:COMPROU]->(produtos_comprados:Produto)
+        MATCH (cliente:Cliente {id_cliente: ${clienteId}})-[:COMPROU]->(produtos_comprados:Produto)
         WITH cliente, collect(DISTINCT produtos_comprados.id_produto) as produtos_ja_comprados
 
-        // Encontra categorias que o cliente visualizou nos últimos X dias
         MATCH (cliente)-[visualizacao:VISUALIZOU]->(produtos_visualizados:Produto)
-        WHERE visualizacao.data_visualizacao >= date() - duration({days: $diasAnalise})
+        WHERE visualizacao.data_visualizacao >= date() - duration({days: ${diasAnalise}})
 
-        // Busca as categorias dos produtos visualizados
         MATCH (produtos_visualizados)-[:PERTENCE_A]->(categoria_visualizada:Categoria)
 
-        // Conta visualizações por categoria
         WITH cliente, produtos_ja_comprados,
             categoria_visualizada,
             count(DISTINCT visualizacao) as total_visualizacoes_categoria,
             collect(DISTINCT produtos_visualizados.id_produto) as produtos_visualizados_categoria
 
-        // Encontra outros produtos dessa categoria que o cliente NÃO comprou
         MATCH (produtos_categoria:Produto)-[:PERTENCE_A]->(categoria_visualizada)
         MATCH (produtos_categoria)-[:PRODUZIDO_POR]->(marca:Marca)
 
-        // Filtra produtos que o cliente ainda não comprou
         WHERE NOT produtos_categoria.id_produto IN produtos_ja_comprados
           AND NOT produtos_categoria.id_produto IN produtos_visualizados_categoria
 
-        // Calcula score baseado na popularidade do produto + visualizações da categoria
         OPTIONAL MATCH (outros_clientes:Cliente)-[:COMPROU]->(produtos_categoria)
         WITH cliente, produtos_ja_comprados, categoria_visualizada, total_visualizacoes_categoria,
             produtos_categoria, marca,
             count(DISTINCT outros_clientes) as popularidade_produto
 
-        // Calcula score final combinando visualizações da categoria e popularidade do produto
         WITH cliente, categoria_visualizada, total_visualizacoes_categoria,
             produtos_categoria, marca,
             round((total_visualizacoes_categoria * 0.7 + popularidade_produto * 0.3), 2) as score_final
 
-        // Ordena por score e limita resultados
         ORDER BY score_final DESC, produtos_categoria.nome ASC
-        LIMIT $limite
+        LIMIT ${limite}
 
         RETURN produtos_categoria.id_produto as id_produto,
               produtos_categoria.nome as nome,
@@ -114,13 +98,22 @@ export class RecommendationRepository {
         diasAnalise,
       });
 
-      return result.records.map((record) => ({
+      // eslint-disable-next-line no-console
+      console.log(
+        '[getCategoryBasedRecommendations] Neo4j result:',
+        JSON.stringify(result.records, null, 2),
+      );
+
+      const mapped = result.records.map((record) => ({
         id_produto: record.get('id_produto'),
         nome: record.get('nome'),
         preco: record.get('preco'),
         score: record.get('score'),
         motivo_recomendacao: 'Baseado nas categorias visualizadas',
       }));
+      // eslint-disable-next-line no-console
+      console.log('[getCategoryBasedRecommendations] mapped result:', mapped);
+      return mapped;
     } catch {
       return [];
     } finally {
@@ -128,9 +121,6 @@ export class RecommendationRepository {
     }
   }
 
-  /**
-   * Menor caminho entre dois produtos (análise de relacionamento)
-   */
   async getShortestPath(
     produtoOrigemId: string,
     produtoDestinoId: string,
@@ -140,58 +130,48 @@ export class RecommendationRepository {
 
     try {
       const query = `
-        // Busca informações dos produtos origem e destino
-        MATCH (origem:Produto {id_produto: $produtoOrigemId})
-        MATCH (destino:Produto {id_produto: $produtoDestinoId})
+    MATCH (origem:Produto {id_produto: '${produtoOrigemId}'})
+    MATCH (destino:Produto {id_produto: '${produtoDestinoId}'})
+    WHERE origem <> destino
 
-        // Encontra o caminho mais curto considerando relacionamentos bidirecionais
-        MATCH path = shortestPath((origem)-[*1..$maxDistancia]-(destino))
-        WHERE origem <> destino
+    OPTIONAL MATCH path = shortestPath((origem)-[:PERTENCE_A|PRODUZIDO_POR*1..${maxDistancia}]-(destino))
+    WHERE all(n IN nodes(path) WHERE n:Produto OR n:Categoria OR n:Marca)
 
-        // Extrai informações do caminho
-        WITH origem, destino, path,
-            length(path) as distancia,
-            nodes(path) as nos_caminho
+    WITH origem, destino, path,
+         CASE WHEN path IS NOT NULL THEN true ELSE false END AS caminho_encontrado,
+         CASE WHEN path IS NOT NULL THEN length(path) ELSE 0 END AS distancia,
+         CASE WHEN path IS NOT NULL THEN nodes(path) ELSE [] END AS nos_do_caminho
 
-        // Prepara os nós do caminho com suas informações
-        UNWIND range(0, size(nos_caminho)-1) as indice
-        WITH origem, destino, distancia, nos_caminho, indice,
-            nos_caminho[indice] as no_atual
+    WITH origem, destino, caminho_encontrado, distancia,
+         [i IN range(0, size(nos_do_caminho) - 1) |
+           CASE WHEN nos_do_caminho IS NOT NULL AND size(nos_do_caminho) > i THEN
+             {
+               tipo: CASE
+                       WHEN 'Produto' IN labels(nos_do_caminho[i]) THEN 'produto'
+                       WHEN 'Categoria' IN labels(nos_do_caminho[i]) THEN 'categoria'
+                       WHEN 'Marca' IN labels(nos_do_caminho[i]) THEN 'marca'
+                     END,
+               id: CASE
+                     WHEN 'Produto' IN labels(nos_do_caminho[i]) THEN nos_do_caminho[i].id_produto
+                     WHEN 'Categoria' IN labels(nos_do_caminho[i]) THEN nos_do_caminho[i].id_categoria
+                     ELSE null
+                   END,
+               nome: CASE
+                     WHEN 'Marca' IN labels(nos_do_caminho[i]) THEN coalesce(nos_do_caminho[i].nome, '')
+                     ELSE nos_do_caminho[i].nome
+                   END,
+               posicao_no_caminho: i
+             }
+           ELSE NULL END
+         ] AS caminho_formatado
 
-        // Determina o tipo de cada nó
-        WITH origem, destino, distancia, nos_caminho, indice, no_atual,
-            CASE
-              WHEN 'Produto' IN labels(no_atual) THEN 'produto'
-              WHEN 'Categoria' IN labels(no_atual) THEN 'categoria'
-              WHEN 'Marca' IN labels(no_atual) THEN 'marca'
-              ELSE 'desconhecido'
-            END as tipo_no
-
-        // Coleta informações de cada nó
-        WITH origem, destino, distancia,
-            collect({
-              tipo: tipo_no,
-              id: CASE tipo_no
-                    WHEN 'produto' THEN no_atual.id_produto
-                    WHEN 'categoria' THEN no_atual.id_categoria
-                    WHEN 'marca' THEN no_atual.id_marca
-                    ELSE toString(id(no_atual))
-                  END,
-              nome: no_atual.nome,
-              posicao_no_caminho: indice
-            }) as caminho_detalhado
-
-        RETURN origem.id_produto as produto_origem_id,
-              origem.nome as produto_origem_nome,
-              destino.id_produto as produto_destino_id,
-              destino.nome as produto_destino_nome,
-              true as caminho_encontrado,
-              distancia,
-              'caminho_mais_curto' as algoritmo_usado,
-              caminho_detalhado as caminho
-
-        LIMIT 1
-      `;
+    RETURN origem.id_produto AS produto_origem_id,
+           destino.id_produto AS produto_destino_id,
+           caminho_encontrado,
+           distancia,
+           caminho_formatado AS caminho
+    LIMIT 1
+  `;
 
       const result = await session.run(query, {
         produtoOrigemId,
@@ -211,7 +191,6 @@ export class RecommendationRepository {
           },
           caminho_encontrado: false,
           distancia: -1,
-          algoritmo_usado: 'caminho_mais_curto',
           caminho: [],
         };
       }
@@ -220,15 +199,12 @@ export class RecommendationRepository {
       return {
         produto_origem: {
           id_produto: record.get('produto_origem_id'),
-          nome: record.get('produto_origem_nome'),
         },
         produto_destino: {
           id_produto: record.get('produto_destino_id'),
-          nome: record.get('produto_destino_nome'),
         },
         caminho_encontrado: record.get('caminho_encontrado'),
         distancia: record.get('distancia').toNumber(),
-        algoritmo_usado: record.get('algoritmo_usado'),
         caminho: record.get('caminho'),
       };
     } catch {
@@ -243,7 +219,6 @@ export class RecommendationRepository {
         },
         caminho_encontrado: false,
         distancia: -1,
-        algoritmo_usado: 'caminho_mais_curto',
         caminho: [],
       };
     } finally {
@@ -255,11 +230,8 @@ export class RecommendationRepository {
   // Customer Recommendations
   // ============================================================================
 
-  /**
-   * Recomendações baseadas em usuários similares
-   */
   async getUserBasedRecommendations(
-    clienteId: string,
+    clienteId: number,
     limite: number = 10,
     minSimilaridade: number = 0.1,
   ): Promise<RecommendedProduct[]> {
@@ -267,89 +239,56 @@ export class RecommendationRepository {
 
     try {
       const query = `
-        // Encontra produtos comprados pelo cliente base
-        MATCH (cliente_base:Cliente {id_cliente: $clienteId})-[:COMPROU]->(produto_base:Produto)
+        MATCH (cliente_base:Cliente {id_cliente: ${clienteId}})-[:COMPROU]->(produto_base:Produto)
         WITH cliente_base, collect(produto_base.id_produto) as produtos_cliente_base
-
-        // Encontra outros clientes e seus produtos
         MATCH (outros_clientes:Cliente)-[:COMPROU]->(produtos_outros:Produto)
-        WHERE outros_clientes.id_cliente <> $clienteId
-
-        // Agrupa produtos por cliente
-        WITH cliente_base, produtos_cliente_base,
-             outros_clientes, collect(produtos_outros.id_produto) as produtos_outros_clientes
-
-        // Calcula intersecção (produtos em comum)
+        WHERE outros_clientes.id_cliente <> ${clienteId}
+        WITH cliente_base, produtos_cliente_base, outros_clientes, collect(produtos_outros.id_produto) as produtos_outros_clientes
         WITH cliente_base, produtos_cliente_base, outros_clientes, produtos_outros_clientes,
              [produto IN produtos_cliente_base WHERE produto IN produtos_outros_clientes] as produtos_em_comum
-
-        // Calcula similaridade usando Jaccard (intersecção / união)
         WITH cliente_base, produtos_cliente_base, outros_clientes, produtos_outros_clientes,
              produtos_em_comum,
              size(produtos_em_comum) as intersecao,
              size(produtos_cliente_base) + size(produtos_outros_clientes) - size(produtos_em_comum) as uniao
-
-        WHERE intersecao > 0  // Filtro: deve ter pelo menos 1 produto em comum
-
+        WHERE intersecao > 0
         WITH cliente_base, produtos_cliente_base, outros_clientes, produtos_outros_clientes,
              produtos_em_comum, intersecao,
              toFloat(intersecao) / toFloat(uniao) as similaridade
-
-        WHERE similaridade >= $minSimilaridade  // Filtro de similaridade mínima
-
-        // Encontra produtos que outros clientes compraram mas o cliente base não
+        WHERE similaridade >= ${minSimilaridade}
         UNWIND produtos_outros_clientes as produto_recomendado
+        WITH cliente_base, produtos_cliente_base, produto_recomendado, sum(similaridade) as score_total
         WHERE NOT produto_recomendado IN produtos_cliente_base
-
-        // Busca informações detalhadas dos produtos recomendados
+        WITH produto_recomendado, score_total
+        ORDER BY score_total DESC
+        LIMIT ${limite}
         MATCH (produto:Produto {id_produto: produto_recomendado})
-        MATCH (produto)-[:PRODUZIDO_POR]->(marca:Marca)
-        MATCH (produto)-[:PERTENCE_A]->(categoria:Categoria)
-
-        // Agrupa por produto e calcula score baseado na similaridade
-        WITH produto, marca, categoria,
-             collect({
-               id_cliente: outros_clientes.id_cliente,
-               produtos_em_comum: intersecao,
-               total_produtos_cliente: size(produtos_outros_clientes),
-               similaridade: round(similaridade * 100, 2)
-             }) as clientes_similares
-
-        WITH produto, marca, categoria, clientes_similares,
-             reduce(score = 0.0, cliente IN clientes_similares | score + cliente.similaridade) as score_total
-
-        ORDER BY score_total DESC, size(clientes_similares) DESC
-        LIMIT $limite
-
         RETURN produto.id_produto as id_produto,
-               produto.nome as nome,
-               produto.preco as preco,
                round(score_total, 2) as score
       `;
 
       const result = await session.run(query, {
         clienteId,
-        limite,
         minSimilaridade,
       });
 
-      return result.records.map((record) => ({
-        id_produto: record.get('id_produto'),
-        nome: record.get('nome'),
-        preco: record.get('preco'),
-        score: record.get('score'),
-        motivo_recomendacao: 'Baseado em clientes similares',
-      }));
-    } catch {
+      const mapped = result.records.map((record) => {
+        const obj = {
+          id_produto: record.get('id_produto'),
+          score: record.get('score'),
+          motivo_recomendacao: 'Baseado em clientes similares',
+        };
+
+        return obj;
+      });
+      return mapped;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err) {
       return [];
     } finally {
       await session.close();
     }
   }
 
-  /**
-   * Clientes influenciadores (com mais avaliações e melhores notas)
-   */
   async getInfluencerCustomers(limit: number = 10): Promise<InfluencerCustomer[]> {
     const session: Session = this.neo4jDriver.session();
 
@@ -357,32 +296,57 @@ export class RecommendationRepository {
       const query = `
         MATCH (c:Cliente)-[a:AVALIOU]->(p:Produto)
         RETURN c.id_cliente as id_cliente,
-               c.nome as nome,
                count(a) as total_avaliacoes,
                avg(a.nota) as media_notas,
                collect(DISTINCT p.id_produto) as produtos_avaliados
         ORDER BY total_avaliacoes DESC, media_notas DESC
-        LIMIT $limit
+        LIMIT ${limit}
       `;
 
       const result = await session.run(query, { limit });
 
-      return result.records.map((record) => {
-        const totalAvaliacoes = record.get('total_avaliacoes').toNumber();
-        const mediaNotas = record.get('media_notas').toNumber();
+      const mapped = result.records.map((record) => {
+        let idCliente = record.get('id_cliente');
+        if (
+          idCliente &&
+          typeof idCliente === 'object' &&
+          typeof idCliente.toNumber === 'function'
+        ) {
+          idCliente = idCliente.toNumber().toString();
+        } else {
+          idCliente = String(idCliente);
+        }
 
-        // Calcular score de influência baseado em quantidade e qualidade das avaliações
+        let totalAvaliacoes = record.get('total_avaliacoes');
+        if (
+          totalAvaliacoes &&
+          typeof totalAvaliacoes === 'object' &&
+          typeof totalAvaliacoes.toNumber === 'function'
+        ) {
+          totalAvaliacoes = totalAvaliacoes.toNumber();
+        }
+
+        let mediaNotas = record.get('media_notas');
+        if (
+          mediaNotas &&
+          typeof mediaNotas === 'object' &&
+          typeof mediaNotas.toNumber === 'function'
+        ) {
+          mediaNotas = mediaNotas.toNumber();
+        }
+
         const influenciaScore = Math.round((totalAvaliacoes * mediaNotas) / 5);
 
-        return {
-          id_cliente: record.get('id_cliente'),
-          nome: record.get('nome'),
+        const obj = {
+          id_cliente: idCliente,
           total_avaliacoes: totalAvaliacoes,
           media_notas: Math.round(mediaNotas * 100) / 100,
           produtos_avaliados: record.get('produtos_avaliados'),
           influencia_score: influenciaScore,
         };
+        return obj;
       });
+      return mapped;
     } catch {
       return [];
     } finally {
@@ -390,9 +354,6 @@ export class RecommendationRepository {
     }
   }
 
-  /**
-   * Produtos trending (mais comprados recentemente)
-   */
   async getTrendingProducts(
     diasRecentes: number = 7,
     limit: number = 10,

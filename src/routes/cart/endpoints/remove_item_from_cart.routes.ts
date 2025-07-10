@@ -28,7 +28,7 @@ const removeItemFromCartRoutes = async (fastify: FastifyInstance) => {
           .status(400)
           .send({ success: false, message: 'id_produto e quantidade válidos são obrigatórios.' });
 
-      const productRepo = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+      const productRepo = new ProductRepository(fastify);
       const product = await productRepo.findById(id_produto);
 
       if (!product)

@@ -8,7 +8,7 @@ const getConversionFunnelRoute = async (fastify: FastifyInstance) => {
     preHandler: fastify.authenticate,
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const analyticsRepo = new AnalyticsRepository(request.server);
+        const analyticsRepo = new AnalyticsRepository(fastify);
 
         const stats = await analyticsRepo.getConversionFunnelStats();
 

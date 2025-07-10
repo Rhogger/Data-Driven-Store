@@ -1,8 +1,11 @@
-import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { RecommendationRepository } from '@/repositories/recommendation/RecommendationRepository';
+import { FastifyPluginAsync } from 'fastify';
+import { RecommendationRepository } from '@repositories/recommendation/RecommendationRepository';
+import { productRecommendationSchemas } from '@routes/recommendations/schema/recommendation.schemas';
+import { CustomerRepository } from '@/repositories/customer/CustomerRepository';
+import { ProductRepository } from '@repositories/product/ProductRepository';
 
 interface UserBasedRecommendationsParams {
-  clienteId: string;
+  clienteId: number;
 }
 
 interface UserBasedRecommendationsQuery {
@@ -10,78 +13,94 @@ interface UserBasedRecommendationsQuery {
   minSimilaridade?: number;
 }
 
-async function userBasedRecommendationsHandler(
-  this: FastifyInstance,
-  request: FastifyRequest<{
+const userBasedRecommendationsRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.get<{
     Params: UserBasedRecommendationsParams;
     Querystring: UserBasedRecommendationsQuery;
-  }>,
-  reply: FastifyReply,
-) {
-  try {
-    const { clienteId } = request.params;
-    const { limite = 10, minSimilaridade = 0.1 } = request.query;
+  }>('/recommendations/customers/:clienteId/user-based', {
+    schema: productRecommendationSchemas.userBasedRecommendations(),
+    preHandler: fastify.authenticate,
+    handler: async (request, reply) => {
+      try {
+        const { clienteId } = request.params;
+        const { limite = 10, minSimilaridade = 0.1 } = request.query;
 
-    // Validação básica
-    if (!clienteId || clienteId.trim() === '') {
-      return reply.code(400).send({
-        success: false,
-        error: 'ID do cliente é obrigatório',
-        details: 'O parâmetro clienteId não pode estar vazio',
-      });
-    }
+        if (!clienteId) {
+          return reply.code(400).send({
+            success: false,
+            error: 'ID do cliente é obrigatório',
+            details: 'O parâmetro clienteId não pode estar vazio',
+          });
+        }
 
-    if (limite < 1 || limite > 50) {
-      return reply.code(400).send({
-        success: false,
-        error: 'Limite inválido',
-        details: 'O limite deve estar entre 1 e 50',
-      });
-    }
+        if (limite < 1 || limite > 50) {
+          return reply.code(400).send({
+            success: false,
+            error: 'Limite inválido',
+            details: 'O limite deve estar entre 1 e 50',
+          });
+        }
 
-    if (minSimilaridade < 0 || minSimilaridade > 1) {
-      return reply.code(400).send({
-        success: false,
-        error: 'Similaridade mínima inválida',
-        details: 'A similaridade mínima deve estar entre 0 e 1',
-      });
-    }
+        if (minSimilaridade < 0 || minSimilaridade > 1) {
+          return reply.code(400).send({
+            success: false,
+            error: 'Similaridade mínima inválida',
+            details: 'A similaridade mínima deve estar entre 0 e 1',
+          });
+        }
 
-    // Instancia o repository
-    const recommendationRepository = new RecommendationRepository(this);
+        const customerRepo = new CustomerRepository(fastify);
+        const cliente = await customerRepo.findById(clienteId);
 
-    // Executa a recomendação baseada em clientes similares
-    const recomendacoes = await recommendationRepository.getUserBasedRecommendations(
-      clienteId,
-      limite,
-      minSimilaridade,
-    );
+        if (!cliente)
+          return reply.code(404).send({
+            success: false,
+            error: 'Cliente não encontrado',
+          });
 
-    // Verifica se encontrou recomendações
-    if (recomendacoes.length === 0) {
-      return reply.code(404).send({
-        success: false,
-        error: 'Nenhuma recomendação encontrada para este cliente',
-      });
-    }
+        const recommendationRepository = new RecommendationRepository(fastify);
+        const productRepo = new ProductRepository(fastify);
+        const recomendacoesNeo4j = await recommendationRepository.getUserBasedRecommendations(
+          clienteId,
+          limite,
+          minSimilaridade,
+        );
 
-    // Resposta de sucesso
-    reply.code(200).send({
-      success: true,
-      data: {
-        cliente_base: clienteId,
-        total_recomendacoes: recomendacoes.length,
-        min_similaridade: minSimilaridade,
-        recomendacoes,
-      },
-    });
-  } catch (error) {
-    this.log.error(error);
-    reply.code(500).send({
-      success: false,
-      error: 'Erro interno do servidor ao processar recomendações user-based',
-    });
-  }
-}
+        if (recomendacoesNeo4j.length === 0) {
+          return reply.code(404).send({
+            success: false,
+            error: 'Nenhuma recomendação encontrada para este cliente',
+          });
+        }
 
-export { userBasedRecommendationsHandler };
+        const idsRecomendados = recomendacoesNeo4j.map((r) => r.id_produto);
+        const produtosRecomendados = await Promise.all(
+          idsRecomendados.map((id) => productRepo.findById(id)),
+        );
+
+        const recomendacoes = recomendacoesNeo4j.map((rec, idx) => ({
+          ...rec,
+          nome: produtosRecomendados[idx]?.nome || null,
+        }));
+
+        reply.code(200).send({
+          success: true,
+          data: {
+            cliente_base: clienteId,
+            total_recomendacoes: recomendacoes.length,
+            min_similaridade: minSimilaridade,
+            recomendacoes,
+          },
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        reply.code(500).send({
+          success: false,
+          error: 'Erro interno do servidor ao processar recomendações user-based',
+        });
+      }
+    },
+  });
+};
+
+export default userBasedRecommendationsRoutes;

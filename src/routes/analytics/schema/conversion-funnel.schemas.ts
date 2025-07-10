@@ -1,6 +1,6 @@
 export const conversionFunnelSchemas = {
   getConversionFunnelStats: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Estatísticas gerais do funil de conversão',
     description:
@@ -62,7 +62,7 @@ export const conversionFunnelSchemas = {
   }),
 
   getConversionFunnelByProduct: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Funil de conversão por produto específico',
     description:

@@ -63,7 +63,7 @@ const updateProductRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+        const productRepository = new ProductRepository(fastify);
         const product = await productRepository.update(request.params.id, request.body);
 
         if (!product) {

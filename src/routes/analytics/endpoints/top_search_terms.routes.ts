@@ -8,8 +8,7 @@ const getTopSearchTermsRoute = async (fastify: FastifyInstance) => {
     preHandler: fastify.authenticate,
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const cassandraClient = request.server.cassandra;
-        const searchTermsRepo = new SearchTermsAggregatedRepository(cassandraClient);
+        const searchTermsRepo = new SearchTermsAggregatedRepository(fastify);
 
         const termosMap = new Map<string, number>();
         const hoje = new Date();

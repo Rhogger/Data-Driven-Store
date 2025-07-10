@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { Client as CassandraClient } from 'cassandra-driver';
+import { Client as CassandraClient, types as CassandraTypes } from 'cassandra-driver';
 import {
   ConversionFunnelData,
   ConversionFunnelStats,
@@ -116,26 +116,30 @@ export class AnalyticsRepository {
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - 6); // Últimos 7 dias
 
-    const query = `
-      SELECT data_evento, SUM(total_visualizacoes) as total_dia
-      FROM ${this.keyspace}.visualizacoes_produto_agregadas_por_dia
-      WHERE data_evento >= ? AND data_evento <= ?
-    `;
-
-    const result = await this.cassandraClient.execute(query, [
-      startDate.toISOString().split('T')[0],
-      endDate.toISOString().split('T')[0],
-    ]);
-
-    const visualizacoesPorDia = result.rows.map((row) => ({
-      data: row.data_evento,
-      total_visualizacoes: parseInt(row.total_dia.toString(), 10),
-    }));
-
-    const totalVisualizacoes = visualizacoesPorDia.reduce(
-      (acc, dia) => acc + dia.total_visualizacoes,
-      0,
-    );
+    // Busca dia a dia para evitar ALLOW FILTERING
+    const visualizacoesPorDia: { data: string; total_visualizacoes: number }[] = [];
+    let totalVisualizacoes = 0;
+    for (let i = 0; i < 7; i++) {
+      const data = new Date(startDate);
+      data.setDate(startDate.getDate() + i);
+      const dataStr = data.toISOString().split('T')[0];
+      // Converter para types.LocalDate do Cassandra
+      const cassandraDate = CassandraTypes.LocalDate.fromDate(data);
+      const query = `
+        SELECT SUM(total_visualizacoes) as total_dia
+        FROM ${this.keyspace}.visualizacoes_produto_agregadas_por_dia
+        WHERE data_evento = ?
+      `;
+      const result = await this.cassandraClient.execute(query, [cassandraDate]);
+      const totalDia = result.rows[0]?.total_dia
+        ? parseInt(result.rows[0].total_dia.toString(), 10)
+        : 0;
+      visualizacoesPorDia.push({
+        data: dataStr,
+        total_visualizacoes: totalDia,
+      });
+      totalVisualizacoes += totalDia;
+    }
 
     return {
       semana_inicio: startDate.toISOString().split('T')[0],
@@ -226,27 +230,70 @@ export class AnalyticsRepository {
 
   async getUsersByUtmSource(utmSource: string, limite: number = 20): Promise<UsersByUtmData> {
     const query = `
-      SELECT id_usuario, MIN(timestamp_evento) as primeira_compra, COUNT(*) as total_compras,
-             COLLECT(id_produto) as produtos_comprados
+      SELECT origem_campanha, id_usuario, timestamp_evento, id_produto
       FROM ${this.keyspace}.compras_por_utm_source
       WHERE origem_campanha = ?
-      GROUP BY id_usuario
-      LIMIT ?
     `;
-
-    const result = await this.cassandraClient.execute(query, [utmSource, limite]);
-
-    const usuarios = result.rows.map((row) => ({
-      id_usuario: row.id_usuario.toString(),
-      timestamp_primeira_compra: row.primeira_compra.toISOString(),
-      total_compras: parseInt(row.total_compras.toString(), 10),
-      produtos_comprados: row.produtos_comprados || [],
-    }));
-
-    return {
+    const params = [utmSource];
+    console.log('[DEBUG] Executando query Cassandra:', query, params);
+    const result = await this.cassandraClient.execute(query, params, { prepare: true });
+    console.log('[DEBUG] Resultado bruto da query:', JSON.stringify(result, null, 2));
+    console.log('[DEBUG] Rows retornadas:', result.rows.length);
+    result.rows.forEach((row, idx) => {
+      console.log(`[DEBUG] Row #${idx}:`, JSON.stringify(row));
+    });
+    // Agrupa por usuário
+    const usuariosMap = new Map<
+      number,
+      {
+        id_usuario: number;
+        timestamp_primeira_compra: Date;
+        total_compras: number;
+        produtos_comprados: string[];
+      }
+    >();
+    result.rows.forEach((row, idx) => {
+      console.log(`[DEBUG] Processando row #${idx}:`, JSON.stringify(row));
+      const userId = row.id_usuario;
+      const dataEvento = row.timestamp_evento;
+      if (usuariosMap.has(userId)) {
+        const user = usuariosMap.get(userId)!;
+        user.total_compras += 1;
+        user.produtos_comprados.push(row.id_produto);
+        if (dataEvento < user.timestamp_primeira_compra) {
+          user.timestamp_primeira_compra = dataEvento;
+        }
+        console.log('[DEBUG] Atualizado usuario existente:', JSON.stringify(user));
+      } else {
+        usuariosMap.set(userId, {
+          id_usuario: userId,
+          timestamp_primeira_compra: dataEvento,
+          total_compras: 1,
+          produtos_comprados: [row.id_produto],
+        });
+        console.log('[DEBUG] Novo usuario adicionado:', JSON.stringify(usuariosMap.get(userId)));
+      }
+    });
+    const usuarios = Array.from(usuariosMap.values())
+      .sort((a, b) => b.total_compras - a.total_compras)
+      .slice(0, limite)
+      .map((user, idx) => {
+        const obj = {
+          id_usuario: user.id_usuario.toString(),
+          timestamp_primeira_compra: user.timestamp_primeira_compra?.toISOString?.() || '',
+          total_compras: user.total_compras,
+          produtos_comprados: user.produtos_comprados,
+        };
+        console.log(`[DEBUG] Usuario agrupado #${idx}:`, JSON.stringify(obj));
+        return obj;
+      });
+    console.log('[DEBUG] usuarios agrupados final:', JSON.stringify(usuarios, null, 2));
+    const response = {
       utm_source: utmSource,
       total_usuarios_compraram: usuarios.length,
       usuarios,
     };
+    console.log('[DEBUG] Response final retornado:', JSON.stringify(response, null, 2));
+    return response;
   }
 }

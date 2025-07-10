@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { ObjectId } from 'mongodb';
+import { Db, MongoClient, ObjectId } from 'mongodb';
 import { Driver } from 'neo4j-driver';
 import { Redis } from 'ioredis';
 import {
@@ -11,20 +11,22 @@ import {
 } from './ProductInterfaces';
 
 export class ProductRepository {
-  private fastify: FastifyInstance;
+  private mongodb: {
+    client: MongoClient;
+    db: Db;
+  };
   private neo4jDriver: Driver;
   private redis: Redis;
   private readonly PRODUCT_CACHE_TTL = 300;
-  private readonly RANKING_TTL = 604800;
 
-  constructor(fastify: FastifyInstance, neo4jDriver: Driver, redis: Redis) {
-    this.fastify = fastify;
-    this.neo4jDriver = neo4jDriver;
-    this.redis = redis;
+  constructor(fastify: FastifyInstance) {
+    this.mongodb = fastify.mongodb;
+    this.neo4jDriver = fastify.neo4j;
+    this.redis = fastify.redis;
   }
 
   private get mongoCollection() {
-    return this.fastify.mongodb.db.collection('products');
+    return this.mongodb.db.collection('products');
   }
 
   // ===== MONGODB OPERATIONS =====
@@ -203,7 +205,9 @@ export class ProductRepository {
 
     const updatedDocs = await this.mongoCollection.find(filter).toArray();
 
-    const invalidationPromises = updatedDocs.map((doc) => this.invalidateCache(doc._id.toString()));
+    const invalidationPromises = updatedDocs.map((doc: any) =>
+      this.invalidateCache(doc._id.toString()),
+    );
     await Promise.all(invalidationPromises);
 
     return updatedDocs.map((doc: any) => this.normalizeProduct(doc));
@@ -256,6 +260,46 @@ export class ProductRepository {
 
   // ===== NEO4J OPERATIONS =====
 
+  async createProductNodeNeo4j(product: any): Promise<void> {
+    const session = this.neo4jDriver.session();
+    try {
+      await session.run(
+        `CREATE (p:Produto {
+          id_produto: $id_produto,
+          nome: $nome,
+          preco: $preco,
+          marca: $marca,
+          estoque: $estoque,
+          criado_em: datetime($criado_em)
+        })`,
+        {
+          id_produto: product.id_produto,
+          nome: product.nome,
+          preco: product.preco,
+          marca: product.marca,
+          estoque: product.estoque,
+          criado_em: (product.created_at || new Date()).toISOString(),
+        },
+      );
+
+      if (Array.isArray(product.categorias)) {
+        for (const categoriaId of product.categorias) {
+          await session.run(
+            `MATCH (p:Produto {id_produto: $id_produto})
+             MERGE (c:Categoria {id_categoria: $id_categoria})
+             MERGE (p)-[:PERTENCE_A]->(c)`,
+            {
+              id_produto: product.id_produto,
+              id_categoria: categoriaId,
+            },
+          );
+        }
+      }
+    } finally {
+      await session.close();
+    }
+  }
+
   async createRelationships(productId: string, categoryId: string, brandId: string): Promise<void> {
     const session = this.neo4jDriver.session();
 
@@ -289,8 +333,9 @@ export class ProductRepository {
           productId: String(id_produto),
         },
       );
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
-      this.fastify.log.warn({ err }, 'Erro ao criar relacionamento de visualização no Neo4j');
+      //
     } finally {
       await session.close();
     }
@@ -337,10 +382,7 @@ export class ProductRepository {
   private async saveToCache(product: Product): Promise<void> {
     const productId = product.id_produto || product._id?.toString();
 
-    if (!productId) {
-      this.fastify.log.warn({ product }, 'Tentativa de salvar produto no cache sem um ID válido.');
-      return;
-    }
+    if (!productId) return;
 
     const cacheKey = `produto:${productId}`;
     await this.redis.setex(cacheKey, this.PRODUCT_CACHE_TTL, JSON.stringify(product));

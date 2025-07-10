@@ -13,7 +13,7 @@ const listProductReviewsRoutes: FastifyPluginAsync = async (fastify) => {
     handler: async (request, reply) => {
       try {
         const { id } = request.params;
-        const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+        const productRepository = new ProductRepository(fastify);
         const result = await productRepository.getProductReviews(id);
 
         if (result === null) {

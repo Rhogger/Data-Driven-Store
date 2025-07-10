@@ -8,7 +8,7 @@ const averagePriceByBrandRoutes: FastifyPluginAsync = async (fastify) => {
     preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       try {
-        const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+        const productRepository = new ProductRepository(fastify);
         const reportData = await productRepository.getAveragePriceByBrand();
 
         return reply.send({

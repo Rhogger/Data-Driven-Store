@@ -71,13 +71,54 @@ const createProductRoutes: FastifyPluginAsync = async (fastify) => {
           }
         }
 
-        const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+        const productRepository = new ProductRepository(fastify);
 
         fastify.log.info({ body: request.body }, 'Dados para criar produto');
 
         const product = await productRepository.create(request.body);
-
         fastify.log.info({ product }, 'Produto criado');
+
+        try {
+          const session = fastify.neo4j.session();
+          await session.run(
+            `MERGE (p:Produto {id_produto: $id_produto})
+             SET p.nome = $nome,
+                 p.preco = $preco,
+                 p.marca = $marca,
+                 p.estoque = $estoque,
+                 p.criado_em = datetime($criado_em)
+            `,
+            {
+              id_produto: product.id_produto,
+              nome: product.nome,
+              preco: product.preco,
+              marca: product.marca,
+              estoque: product.estoque,
+              criado_em: (product.created_at || new Date()).toISOString(),
+            },
+          );
+
+          if (Array.isArray(product.categorias)) {
+            for (const categoriaId of product.categorias) {
+              await session.run(
+                `MERGE (p:Produto {id_produto: $id_produto})
+                 MERGE (c:Categoria {id_categoria: $id_categoria})
+                 MERGE (p)-[:PERTENCE_A]->(c)`,
+                {
+                  id_produto: product.id_produto,
+                  id_categoria: categoriaId,
+                },
+              );
+            }
+          }
+          await session.close();
+          fastify.log.info(
+            { id_produto: product.id_produto },
+            'Produto criado/atualizado no Neo4j',
+          );
+        } catch (err) {
+          fastify.log.error({ err }, 'Erro ao criar/atualizar produto no Neo4j');
+        }
 
         return reply.status(201).send({
           success: true,

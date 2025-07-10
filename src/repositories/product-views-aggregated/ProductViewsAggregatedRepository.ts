@@ -3,18 +3,16 @@ import {
   ProductViewAggregated,
   IncrementProductViewInput,
 } from './ProductViewAggregatedInterfaces';
+import { FastifyInstance } from 'fastify';
 
 export class ProductViewsAggregatedRepository {
   private client: Client;
   private keyspace: string = 'datadriven_store';
 
-  constructor(client: Client) {
-    this.client = client;
+  constructor(fastify: FastifyInstance) {
+    this.client = fastify.cassandra;
   }
 
-  /**
-   * Incrementa o contador de visualizações de um produto para uma data específica
-   */
   async increment(input: IncrementProductViewInput): Promise<void> {
     const incremento = input.incremento || 1;
     const query = `
@@ -32,9 +30,6 @@ export class ProductViewsAggregatedRepository {
     }
   }
 
-  /**
-   * Busca visualizações de produtos por data específica
-   */
   async findByDate(dataEvento: Date): Promise<ProductViewAggregated[]> {
     const query = `
       SELECT * FROM ${this.keyspace}.visualizacoes_produto_agregadas_por_dia

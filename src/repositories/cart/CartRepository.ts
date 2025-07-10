@@ -1,12 +1,13 @@
 import { Redis } from 'ioredis';
 import { CartData } from './CartInterfaces';
+import { FastifyInstance } from 'fastify';
 
 export class CartRepository {
   private redis: Redis;
   private readonly CART_TTL = 129600;
 
-  constructor(redis: Redis) {
-    this.redis = redis;
+  constructor(fastify: FastifyInstance) {
+    this.redis = fastify.redis;
   }
 
   async create(id_cliente: string): Promise<void> {

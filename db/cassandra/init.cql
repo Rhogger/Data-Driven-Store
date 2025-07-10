@@ -3,7 +3,7 @@ CREATE KEYSPACE IF NOT EXISTS datadriven_store WITH replication = {'class': 'Sim
 USE datadriven_store;
 
 CREATE TABLE IF NOT EXISTS funil_conversao_por_usuario_produto (
-    id_usuario UUID,
+    id_usuario INT,
     id_produto TEXT,
     visualizou BOOLEAN,
     adicionou_carrinho BOOLEAN,
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS visualizacoes_produto_agregadas_por_dia (
 CREATE TABLE IF NOT EXISTS compras_por_utm_source (
     origem_campanha TEXT,
     timestamp_evento TIMESTAMP,
-    id_usuario UUID,
+    id_usuario INT,
     id_produto TEXT,
     PRIMARY KEY (origem_campanha, timestamp_evento, id_usuario)
 );

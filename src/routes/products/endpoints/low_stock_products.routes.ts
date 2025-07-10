@@ -13,7 +13,7 @@ const lowStockProductsRoutes: FastifyPluginAsync = async (fastify) => {
     schema: productSchemas.lowStock(),
     preHandler: fastify.authenticate,
     handler: async (request, reply) => {
-      const repo = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+      const repo = new ProductRepository(fastify);
 
       const limiar = Number(request.query.limiar) || 10;
       const products = await repo.findLowStock(limiar);

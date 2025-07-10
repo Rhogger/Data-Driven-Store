@@ -1,17 +1,15 @@
 import { Client } from 'cassandra-driver';
 import { EventByDate, CreateEventByDateInput } from './EventByDateInterfaces';
+import { FastifyInstance } from 'fastify';
 
 export class EventsByDateRepository {
   private client: Client;
   private keyspace: string = 'datadriven_store';
 
-  constructor(client: Client) {
-    this.client = client;
+  constructor(fastify: FastifyInstance) {
+    this.client = fastify.cassandra;
   }
 
-  /**
-   * Cria um novo evento na tabela eventos_por_data
-   */
   async create(evento: CreateEventByDateInput): Promise<void> {
     const query = `
       INSERT INTO ${this.keyspace}.eventos_por_data (
@@ -48,9 +46,6 @@ export class EventsByDateRepository {
     }
   }
 
-  /**
-   * Busca eventos por data específica
-   */
   async findByDate(dataEvento: Date): Promise<EventByDate[]> {
     const query = `
       SELECT * FROM ${this.keyspace}.eventos_por_data

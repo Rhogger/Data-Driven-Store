@@ -226,6 +226,6 @@
         "statusbar": { "label": "Reset" },
         "env": { "PATH": "${env:HOME}/.asdf/shims:${env:PATH}" }
       }
-    }
+    },
   ]
 }

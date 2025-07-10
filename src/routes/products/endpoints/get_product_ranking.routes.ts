@@ -28,7 +28,7 @@ const getProductRankingRoute: FastifyPluginAsync = async (fastify) => {
           if (limitNumber > 100) limitNumber = 100;
         }
 
-        const productRepo = new ProductRepository(fastify, fastify.neo4j, request.server.redis);
+        const productRepo = new ProductRepository(fastify);
         const ranking = await productRepo.getTopViewed(limitNumber);
 
         return reply.send({

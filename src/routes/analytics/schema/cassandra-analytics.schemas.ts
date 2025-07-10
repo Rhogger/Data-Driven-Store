@@ -1,6 +1,6 @@
 export const cassandraAnalyticsSchemas = {
   getConversionFunnel: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Consulta de funil de conversão',
     description:
@@ -39,7 +39,7 @@ export const cassandraAnalyticsSchemas = {
   }),
 
   getWeeklyViews: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Visualizações por dia na última semana',
     description:
@@ -75,7 +75,7 @@ export const cassandraAnalyticsSchemas = {
   }),
 
   getTopSearchTerms: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Top 10 termos de busca mais utilizados',
     description:
@@ -108,7 +108,7 @@ export const cassandraAnalyticsSchemas = {
   }),
 
   getCampaignCTR: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Taxa de cliques (CTR) de uma campanha',
     description:
@@ -118,7 +118,7 @@ export const cassandraAnalyticsSchemas = {
       properties: {
         origemCampanha: {
           type: 'string',
-          description: 'Origem da campanha (utm_source)',
+          description: 'Origem da campanha (utm_source, ex: email, facebook, direct, google)',
         },
       },
       required: ['origemCampanha'],
@@ -132,13 +132,7 @@ export const cassandraAnalyticsSchemas = {
             type: 'object',
             properties: {
               origem_campanha: { type: 'string' },
-              total_visualizacoes: {
-                type: 'integer',
-                description: 'Total de visualizações da campanha',
-              },
               total_cliques: { type: 'integer', description: 'Total de cliques (compras)' },
-              ctr_percentual: { type: 'number', description: 'Taxa de cliques em %' },
-              periodo_analise: { type: 'string' },
             },
           },
         },
@@ -147,11 +141,11 @@ export const cassandraAnalyticsSchemas = {
   }),
 
   getUsersByUtmSource: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Usuários de UTM source que realizaram compra',
     description:
-      'Lista usuários que vieram de uma utm_source específica e realizaram compra. Permite análise de ROI por canal de marketing.',
+      'Lista usuários que vieram de uma utm_source (utm_source, ex: email, facebook, direct, google) específica e realizaram compra. Permite análise de ROI por canal de marketing.',
     params: {
       type: 'object',
       properties: {

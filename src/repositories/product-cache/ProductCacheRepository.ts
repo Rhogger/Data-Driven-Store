@@ -1,12 +1,13 @@
 import { Redis } from 'ioredis';
 import { ProductCacheData } from './ProductCacheInterfaces';
+import { FastifyInstance } from 'fastify';
 
 export class ProductCacheRepository {
   private redis: Redis;
   private readonly PRODUCT_TTL = 300;
 
-  constructor(redis: Redis) {
-    this.redis = redis;
+  constructor(fastify: FastifyInstance) {
+    this.redis = fastify.redis;
   }
 
   async set(productData: ProductCacheData): Promise<void> {

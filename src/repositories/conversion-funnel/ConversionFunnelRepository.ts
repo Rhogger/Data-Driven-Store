@@ -5,18 +5,16 @@ import {
   ConversionFunnelStats,
   ConversionFunnelByProduct,
 } from './ConversionFunnelInterfaces';
+import { FastifyInstance } from 'fastify';
 
 export class ConversionFunnelRepository {
   private client: Client;
   private keyspace: string = 'datadriven_store';
 
-  constructor(client: Client) {
-    this.client = client;
+  constructor(fastify: FastifyInstance) {
+    this.client = fastify.cassandra;
   }
 
-  /**
-   * Cria ou atualiza um registro no funil de conversão
-   */
   async create(funil: CreateConversionFunnelInput): Promise<void> {
     const query = `
       INSERT INTO ${this.keyspace}.funil_conversao_por_usuario_produto (
@@ -47,11 +45,8 @@ export class ConversionFunnelRepository {
     }
   }
 
-  /**
-   * Busca funil de conversão por usuário e produto
-   */
   async findByUserAndProduct(
-    idUsuario: string,
+    idUsuario: number,
     idProduto: string,
   ): Promise<ConversionFunnel | null> {
     const query = `
@@ -81,9 +76,6 @@ export class ConversionFunnelRepository {
     }
   }
 
-  /**
-   * Consulta estatísticas do funil de conversão geral
-   */
   async getConversionFunnelStats(): Promise<ConversionFunnelStats> {
     const query = `
       SELECT id_usuario, visualizou, adicionou_carrinho, comprou
@@ -93,7 +85,7 @@ export class ConversionFunnelRepository {
     try {
       const result = await this.client.execute(query, [], { prepare: true });
 
-      const totalUsuarios = new Set(result.rows.map((row) => row.id_usuario.toString())).size;
+      const totalUsuarios = new Set(result.rows.map((row) => row.id_usuario)).size;
       const visualizaram = result.rows.filter((row) => row.visualizou).length;
       const adicionaramCarrinho = result.rows.filter((row) => row.adicionou_carrinho).length;
       const compraram = result.rows.filter((row) => row.comprou).length;
@@ -118,9 +110,6 @@ export class ConversionFunnelRepository {
     }
   }
 
-  /**
-   * Consulta funil de conversão por produto específico
-   */
   async getConversionFunnelByProduct(idProduto: string): Promise<ConversionFunnelByProduct> {
     const query = `
       SELECT id_usuario, visualizou, adicionou_carrinho, comprou
@@ -132,7 +121,7 @@ export class ConversionFunnelRepository {
     try {
       const result = await this.client.execute(query, [idProduto], { prepare: true });
 
-      const totalUsuarios = new Set(result.rows.map((row) => row.id_usuario.toString())).size;
+      const totalUsuarios = new Set(result.rows.map((row) => row.id_usuario)).size;
       const visualizaram = result.rows.filter((row) => row.visualizou).length;
       const adicionaramCarrinho = result.rows.filter((row) => row.adicionou_carrinho).length;
       const compraram = result.rows.filter((row) => row.comprou).length;

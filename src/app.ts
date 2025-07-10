@@ -49,7 +49,7 @@ app.register(import('@fastify/swagger'), {
         name: 'Customer Recommendations',
         description: 'Endpoints para recomendações de clientes',
       },
-      { name: 'Reports', description: 'Relatórios e análises de dados' },
+      { name: 'Analytics', description: 'Relatórios e análises de dados' },
     ],
     components: {
       securitySchemes: {

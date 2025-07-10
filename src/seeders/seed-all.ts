@@ -7,6 +7,7 @@ import Redis from 'ioredis';
 import { databaseConfig } from '@config/database';
 import seedCassandra from './seed-cassandra';
 import { Client } from 'cassandra-driver';
+import fs from 'fs';
 
 // Tipos para clareza
 type Product = {
@@ -25,7 +26,7 @@ type Product = {
   updated_at: Date;
 };
 
-const TOTAL_PRODUCTS = 25;
+const TOTAL_PRODUCTS = 50;
 const TOTAL_CLIENTS = 20;
 const TOTAL_ORDERS = 30;
 
@@ -358,7 +359,13 @@ async function seedPostgresOrders(pgPool: Pool, products: Product[]) {
   console.log('🌱 [PG] Iniciando seed de Pedidos...');
   const statusPedidosArr = ['Pendente', 'Processando', 'Enviado', 'Entregue', 'Cancelado'];
 
-  for (let i = 1; i <= TOTAL_ORDERS; i++) {
+  // Gera entre 100 e 200 pedidos
+  const totalPedidos = Math.floor(Math.random() * 101) + 100; // 100 a 200
+  // Gera entre 250 e 500 itens_pedido no total
+  const totalItensPedido = Math.floor(Math.random() * 251) + 250; // 250 a 500
+  let itensPedidoCriados = 0;
+  let orderIndex = 1;
+  while (itensPedidoCriados < totalItensPedido && orderIndex <= totalPedidos) {
     const pgClient = await pgPool.connect();
     try {
       await pgClient.query('BEGIN');
@@ -371,6 +378,7 @@ async function seedPostgresOrders(pgPool: Pool, products: Product[]) {
       if (enderecoRows.length === 0) {
         console.warn(`\nSkipping order for client ${randomClienteId} - no address found.`);
         await pgClient.query('ROLLBACK');
+        orderIndex++;
         continue;
       }
       const randomEnderecoId = enderecoRows[0].id_endereco;
@@ -386,23 +394,27 @@ async function seedPostgresOrders(pgPool: Pool, products: Product[]) {
       const pedidoId = pedidoResult.rows[0].id_pedido;
       let pedidoValorTotal = 0;
 
-      const numItensPedido = Math.floor(Math.random() * 3) + 1;
+      // Gera entre 1 e 5 itens por pedido, mas não ultrapassa o total desejado
+      const maxItensRestantes = totalItensPedido - itensPedidoCriados;
+      const numItensPedido = Math.min(Math.floor(Math.random() * 5) + 1, maxItensRestantes); // 1 a 5 itens por pedido
       for (let j = 0; j < numItensPedido; j++) {
         const randomProduct = products[Math.floor(Math.random() * products.length)];
-        const itemQtd = Math.floor(Math.random() * 3) + 1;
+        const itemQtd = Math.floor(Math.random() * 5) + 1; // 1 a 5
         const itemSubtotal = randomProduct.preco * itemQtd;
         await pgClient.query(
           'INSERT INTO itens_pedido (id_pedido, id_produto, id_categoria, preco_unitario, quantidade, subtotal) VALUES ($1, $2, $3, $4, $5, $6)',
           [
             pedidoId,
             randomProduct._id.toHexString(),
-            randomProduct.categorias[0], // Usa a primeira categoria do array como a principal
+            randomProduct.categorias[0],
             randomProduct.preco,
             itemQtd,
             itemSubtotal,
           ],
         );
         pedidoValorTotal += itemSubtotal;
+        itensPedidoCriados++;
+        if (itensPedidoCriados >= totalItensPedido) break;
       }
 
       await pgClient.query('UPDATE pedidos SET valor_total = $1 WHERE id_pedido = $2', [
@@ -429,17 +441,20 @@ async function seedPostgresOrders(pgPool: Pool, products: Product[]) {
 
       await pgClient.query('COMMIT');
       process.stdout.write(
-        `\r   -> Pedido ${i}/${TOTAL_ORDERS} criado com sucesso. ID: ${pedidoId}`,
+        `\r   -> Pedido ${orderIndex}/${TOTAL_ORDERS} criado com sucesso. ID: ${pedidoId} | Itens criados: ${itensPedidoCriados}/${totalItensPedido}`,
       );
     } catch (error) {
       await pgClient.query('ROLLBACK');
-      console.error(`\n❌ Erro ao criar pedido ${i}. A transação foi revertida.`, error);
+      console.error(`\n❌ Erro ao criar pedido ${orderIndex}. A transação foi revertida.`, error);
       throw error;
     } finally {
       pgClient.release();
+      orderIndex++;
     }
   }
-  console.log(`\n✅ [PG] ${TOTAL_ORDERS} pedidos inseridos com sucesso.`);
+  console.log(
+    `\n✅ [PG] Pedidos inseridos com sucesso. Total de itens_pedido: ${itensPedidoCriados}`,
+  );
 }
 
 async function seedNeo4j(pgPool: Pool, products: Product[]) {
@@ -458,7 +473,7 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
     // 2. Buscar dados de base do PostgreSQL
     const { rows: clients } = await pgPool.query('SELECT id_cliente, nome FROM clientes');
     const { rows: categories } = await pgPool.query('SELECT id_categoria, nome FROM categorias');
-    const { rows: orderItems } = await pgPool.query(`
+    await pgPool.query(`
       SELECT p.id_cliente, ip.id_produto, p.data_pedido, ip.quantidade
       FROM itens_pedido ip
       JOIN pedidos p ON ip.id_pedido = p.id_pedido
@@ -522,39 +537,102 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
       { relations: productRelations },
     );
 
-    // Clientes -> Produtos (COMPROU)
-    const purchaseRelations = orderItems.map((item) => ({
-      id_cliente: neo4j.int(item.id_cliente),
-      id_produto: item.id_produto,
-      data_pedido: item.data_pedido.toISOString(),
-      quantidade: neo4j.int(item.quantidade),
-    }));
-    await session.run(
-      `UNWIND $purchases as purchase
-       MATCH (cli:Cliente {id_cliente: purchase.id_cliente})
-       MATCH (p:Produto {id_produto: purchase.id_produto})
-       CREATE (cli)-[:COMPROU {data: datetime(purchase.data_pedido), quantidade: purchase.quantidade}]->(p)`,
-      { purchases: purchaseRelations },
-    );
-
-    // Clientes -> Produtos (VISUALIZOU)
-    // Simula visualizações aleatórias para cada cliente em alguns produtos
+    // VISUALIZOU, COMPROU, AVALIOU - lógica realista
     const visualizouRelations = [];
-    for (const cli of clients) {
-      // Cada cliente visualiza de 2 a 6 produtos aleatórios
-      const numViews = Math.floor(Math.random() * 5) + 2;
-      const shuffledProducts = [...products].sort(() => 0.5 - Math.random());
-      for (let i = 0; i < numViews; i++) {
-        const prod = shuffledProducts[i];
+    const comprouRelations = [];
+    const avaliouRelations = [];
+
+    for (const prod of products) {
+      // Sorteia clientes que visualizaram (6 a 15)
+      const shuffledClients = [...clients].sort(() => 0.5 - Math.random());
+      const numVisualizou = Math.floor(Math.random() * 10) + 6; // 6 a 15
+      const clientesVisualizaram = shuffledClients.slice(0, numVisualizou);
+
+      for (const cli of clientesVisualizaram) {
         visualizouRelations.push({
-          id_cliente: neo4j.int(cli.id_cliente),
+          id_cliente: cli.id_cliente, // Salva como number para exportação
           id_produto: prod._id.toHexString(),
           data: new Date(
             Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000,
           ).toISOString(),
         });
       }
+
+      // Dos que visualizaram, sorteie um subconjunto para COMPROU (pode ser 1 até numVisualizou-1)
+      const shuffledCompradores = [...clientesVisualizaram].sort(() => 0.5 - Math.random());
+      const numComprou =
+        numVisualizou > 1 ? Math.floor(Math.random() * (numVisualizou - 1)) + 1 : 1;
+      const clientesCompraram = shuffledCompradores.slice(0, numComprou);
+
+      for (const cli of clientesCompraram) {
+        comprouRelations.push({
+          id_cliente: cli.id_cliente, // Salva como number para exportação
+          id_produto: prod._id.toHexString(),
+          data_pedido: new Date(
+            Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          quantidade: Math.floor(Math.random() * 3) + 1,
+        });
+      }
+
+      // Dos que compraram, sorteie um subconjunto para AVALIOU (pode ser 0 até numComprou)
+      const shuffledAvaliadores = [...clientesCompraram].sort(() => 0.5 - Math.random());
+      const numAvaliou = numComprou > 0 ? Math.floor(Math.random() * (numComprou + 1)) : 0;
+      const clientesAvaliaram = shuffledAvaliadores.slice(0, numAvaliou);
+
+      for (const cli of clientesAvaliaram) {
+        avaliouRelations.push({
+          id_cliente: cli.id_cliente, // Salva como number para exportação
+          id_produto: prod._id.toHexString(),
+          nota: Math.floor(Math.random() * 5) + 1,
+          comentario: 'Comentário gerado automaticamente.',
+          data: new Date(
+            Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+        });
+      }
     }
+
+    // Cria VISUALIZOU
+    await session.run(
+      `UNWIND $views as view
+       MATCH (cli:Cliente {id_cliente: view.id_cliente})
+       MATCH (p:Produto {id_produto: view.id_produto})
+       CREATE (cli)-[:VISUALIZOU {data: datetime(view.data)}]->(p)`,
+      { views: visualizouRelations.map((v) => ({ ...v, id_cliente: neo4j.int(v.id_cliente) })) },
+    );
+
+    // Cria COMPROU
+    await session.run(
+      `UNWIND $purchases as purchase
+       MATCH (cli:Cliente {id_cliente: purchase.id_cliente})
+       MATCH (p:Produto {id_produto: purchase.id_produto})
+       CREATE (cli)-[:COMPROU {data: datetime(purchase.data_pedido), quantidade: purchase.quantidade}]->(p)`,
+      { purchases: comprouRelations.map((c) => ({ ...c, id_cliente: neo4j.int(c.id_cliente) })) },
+    );
+
+    // Cria AVALIOU
+    if (avaliouRelations.length > 0) {
+      await session.run(
+        `UNWIND $reviews as review
+         MATCH (cli:Cliente {id_cliente: review.id_cliente})
+         MATCH (p:Produto {id_produto: review.id_produto})
+         CREATE (cli)-[:AVALIOU {nota: review.nota, comentario: review.comentario, data: datetime(review.data)}]->(p)`,
+        { reviews: avaliouRelations.map((a) => ({ ...a, id_cliente: neo4j.int(a.id_cliente) })) },
+      );
+    }
+
+    // Exporta as relações para arquivo JSON para uso no seed do Cassandra
+    fs.writeFileSync(
+      'neo4j_events.json',
+      JSON.stringify(
+        { visualizou: visualizouRelations, comprou: comprouRelations, avaliou: avaliouRelations },
+        null,
+        2,
+      ),
+    );
+
+    // Cria VISUALIZOU
     await session.run(
       `UNWIND $views as view
        MATCH (cli:Cliente {id_cliente: view.id_cliente})
@@ -563,29 +641,23 @@ async function seedNeo4j(pgPool: Pool, products: Product[]) {
       { views: visualizouRelations },
     );
 
-    // Clientes -> Produtos (AVALIOU)
-    // Para cada avaliação em cada produto, cria a relação AVALIOU
-    const avaliouRelations = [];
-    for (const prod of products) {
-      if (Array.isArray(prod.avaliacoes)) {
-        for (const av of prod.avaliacoes) {
-          avaliouRelations.push({
-            id_cliente: neo4j.int(av.id_cliente),
-            id_produto: prod._id.toHexString(),
-            nota: av.nota,
-            comentario: av.comentario || '',
-            data: av.data_avaliacao.toISOString(),
-          });
-        }
-      }
-    }
+    // Cria COMPROU
+    await session.run(
+      `UNWIND $purchases as purchase
+       MATCH (cli:Cliente {id_cliente: purchase.id_cliente})
+       MATCH (p:Produto {id_produto: purchase.id_produto})
+       CREATE (cli)-[:COMPROU {data: datetime(purchase.data_pedido), quantidade: purchase.quantidade}]->(p)`,
+      { purchases: comprouRelations },
+    );
+
+    // Cria AVALIOU
     if (avaliouRelations.length > 0) {
       await session.run(
-        `UNWIND $avaliacoes as av
-         MATCH (cli:Cliente {id_cliente: av.id_cliente})
-         MATCH (p:Produto {id_produto: av.id_produto})
-         CREATE (cli)-[:AVALIOU {nota: av.nota, comentario: av.comentario, data: datetime(av.data)}]->(p)`,
-        { avaliacoes: avaliouRelations },
+        `UNWIND $reviews as review
+         MATCH (cli:Cliente {id_cliente: review.id_cliente})
+         MATCH (p:Produto {id_produto: review.id_produto})
+         CREATE (cli)-[:AVALIOU {nota: review.nota, comentario: review.comentario, data: datetime(review.data)}]->(p)`,
+        { reviews: avaliouRelations },
       );
     }
 
@@ -601,7 +673,8 @@ async function seedRedis(redis: Redis, clientIds: number[], products: Product[])
   try {
     // --- Configurações de Quantidade ---
     const NUM_SESSIONS_TO_SIMULATE = 5;
-    const NUM_CARTS_TO_CREATE = 8;
+    // Garante entre 100 e 200 carrinhos e compradores, e que todos que compram tenham carrinho
+    const NUM_CARTS_TO_CREATE = Math.floor(Math.random() * 101) + 100; // 100 a 200
     const NUM_PRODUCTS_TO_CACHE = 10;
     const NUM_PRODUCTS_WITH_VIEWS = 15;
 
@@ -623,9 +696,16 @@ async function seedRedis(redis: Redis, clientIds: number[], products: Product[])
     }
 
     // Cenário 2: Gerenciar um carrinho de compras (HASH)
-    console.log(`   -> 🛒 Criando ${NUM_CARTS_TO_CREATE} carrinhos de compras...`);
-    for (let i = 0; i < NUM_CARTS_TO_CREATE; i++) {
-      const clientId = clientIds[i % clientIds.length];
+    // Seleciona clientes únicos para carrinho e para compra
+    const shuffledClients = [...clientIds].sort(() => 0.5 - Math.random());
+    const clientsWithCart = shuffledClients.slice(
+      0,
+      Math.min(NUM_CARTS_TO_CREATE, clientIds.length),
+    );
+    // const clientsWhoBuy = clientsWithCart.slice(0, Math.min(NUM_BUYERS, clientsWithCart.length));
+
+    console.log(`   -> 🛒 Criando ${clientsWithCart.length} carrinhos de compras...`);
+    for (const clientId of clientsWithCart) {
       const cartKey = `carrinho:${clientId}`;
       const numItemsInCart = Math.floor(Math.random() * 4) + 1; // 1 a 4 itens
       const cartItems: { [key: string]: string } = {};
@@ -635,6 +715,8 @@ async function seedRedis(redis: Redis, clientIds: number[], products: Product[])
       }
       await redis.set(cartKey, JSON.stringify(cartItems));
     }
+
+    // Se quiser usar clientsWhoBuy para simular compras, passe para a função de pedidos
 
     // Cenário 3: Implementar cache de produtos
     console.log(`   -> 📦 Colocando ${NUM_PRODUCTS_TO_CACHE} produtos em cache...`);

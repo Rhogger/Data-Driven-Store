@@ -1,17 +1,15 @@
 import { Client } from 'cassandra-driver';
 import { SearchTermAggregated, IncrementSearchTermInput } from './SearchTermAggregatedInterfaces';
+import { FastifyInstance } from 'fastify';
 
 export class SearchTermsAggregatedRepository {
   private client: Client;
   private keyspace: string = 'datadriven_store';
 
-  constructor(client: Client) {
-    this.client = client;
+  constructor(fastify: FastifyInstance) {
+    this.client = fastify.cassandra;
   }
 
-  /**
-   * Incrementa o contador de um termo de busca para uma data específica
-   */
   async increment(input: IncrementSearchTermInput): Promise<void> {
     const incremento = input.incremento || 1;
     const query = `
@@ -29,9 +27,6 @@ export class SearchTermsAggregatedRepository {
     }
   }
 
-  /**
-   * Busca termos de busca por data específica
-   */
   async findByDate(dataEvento: Date): Promise<SearchTermAggregated[]> {
     const query = `
       SELECT * FROM ${this.keyspace}.termos_busca_agregados_por_dia

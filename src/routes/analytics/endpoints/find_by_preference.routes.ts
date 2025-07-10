@@ -2,14 +2,14 @@ import { FastifyPluginAsync } from 'fastify';
 import { UserPreferenceRepository } from '@repositories/user-preference/UserPreferenceRepository';
 import { CustomerRepository } from '@repositories/customer/CustomerRepository';
 import { CategoryRepository } from '@repositories/category/CategoryRepository';
-import { reportSchemas } from '@routes/reports/schema/report.schemas';
+import { reportSchemas } from '@/routes/analytics/schema/report.schemas';
 
 interface FindByPreferenceParams {
   categoryId: string;
 }
 
 const findByPreferenceRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get<{ Params: FindByPreferenceParams }>('/users/by-preference/:categoryId', {
+  fastify.get<{ Params: FindByPreferenceParams }>('/analytics/by-preference/:categoryId', {
     schema: reportSchemas.findByPreference(),
     preHandler: fastify.authenticate,
     handler: async (request, reply) => {

@@ -6,7 +6,6 @@ import { AddressRepository } from '@repositories/address/AddressRepository';
 import { orderSchemas } from '@routes/orders/schema/order.schemas';
 
 interface CreateOrderInput {
-  id_cliente: number;
   id_endereco: number;
   itens: Array<{
     id_produto: string;
@@ -21,13 +20,17 @@ const createOrderRoutes: FastifyPluginAsync = async (fastify) => {
     schema: orderSchemas.create(),
     preHandler: fastify.authenticate,
     handler: async (request, reply) => {
-      const { id_cliente, id_endereco, itens } = request.body;
+      const { id_endereco, itens } = request.body;
+      const id_cliente = request.user?.id_cliente;
+      if (!id_cliente) {
+        return reply.status(401).send({ message: 'Usuário não autenticado.' });
+      }
 
       if (!itens || itens.length === 0) {
         return reply.status(400).send({ message: 'O pedido deve conter pelo menos um item.' });
       }
 
-      const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+      const productRepository = new ProductRepository(fastify);
       const orderRepository = new OrderRepository(fastify);
       const addressRepository = new AddressRepository(fastify);
 

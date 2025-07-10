@@ -72,7 +72,7 @@ const addFieldByCategoryRoutes: FastifyPluginAsync = async (fastify) => {
               .send({ success: false, error: `Categoria com ID ${categoryIdNum} não encontrada.` });
           }
 
-          const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+          const productRepository = new ProductRepository(fastify);
           const updatedProducts = await productRepository.addFieldToProductsByCategory(
             categoryIdNum,
             field_name,

@@ -43,7 +43,7 @@ const billingByCategoryReportSchema = {
 
 export const reportSchemas = {
   topCustomers: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Relatório dos 5 melhores clientes',
     description:
@@ -54,7 +54,7 @@ export const reportSchemas = {
     },
   }),
   billingByCategory: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Relatório de faturamento mensal por categoria',
     description: 'Gera um relatório do faturamento mensal agrupado por categoria.',
@@ -69,7 +69,7 @@ export const reportSchemas = {
   }),
 
   findByPreference: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Encontrar usuários por preferência de categoria',
     description:
@@ -104,7 +104,7 @@ export const reportSchemas = {
   }),
 
   topCustomerReport: () => ({
-    tags: ['Reports'],
+    tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
     summary: 'Top 5 clientes com maior faturamento nos últimos 6 meses',
     response: {

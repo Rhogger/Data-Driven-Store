@@ -7,15 +7,11 @@ import {
   OrderItemRow,
   OrderWithItems,
 } from './OrderInterfaces';
-import { ProductRepository } from '../product/ProductRepository';
-import { CategoryRepository } from '../category/CategoryRepository';
 
 export class OrderRepository {
   private pg: Pool;
-  private fastify: FastifyInstance;
 
   constructor(fastify: FastifyInstance) {
-    this.fastify = fastify;
     this.pg = fastify.pg;
   }
 
@@ -25,7 +21,6 @@ export class OrderRepository {
     try {
       await client.query('BEGIN');
 
-      // 1. Inserir o pedido
       const orderQuery = `
         INSERT INTO pedidos (id_cliente, id_endereco, valor_total, status_pedido, data_pedido)
         VALUES ($1, $2, $3, $4, NOW())
@@ -41,7 +36,6 @@ export class OrderRepository {
 
       const createdOrder = orderResult.rows[0];
 
-      // 2. Inserir os itens do pedido
       for (const item of orderData.itens) {
         const itemQuery = `
           INSERT INTO itens_pedido (id_pedido, id_produto, id_categoria, quantidade, preco_unitario, subtotal)
@@ -175,9 +169,6 @@ export class OrderRepository {
     };
   }
 
-  /**
-   * Busca os top clientes com maior faturamento nos últimos 6 meses
-   */
   async getTopCustomers(limit: number = 5): Promise<any[]> {
     const { rows } = await this.pg.query(
       `
@@ -203,67 +194,26 @@ export class OrderRepository {
     return rows;
   }
 
-  /**
-   * Relatório de faturamento por categoria
-   */
-  async getBillingByCategory(): Promise<any[]> {
-    const productRepo = new ProductRepository(this.fastify, this.fastify.neo4j, this.fastify.redis);
-    const categoryRepo = new CategoryRepository(this.fastify);
-
-    // 1. Buscar todos os itens de pedidos entregues/enviados
-    const { rows: itens } = await this.pg.query(`
+  async getMonthlyBillingByCategory(): Promise<
+    { mes: string; categoria: string; faturamento: string }[]
+    // eslint-disable-next-line indent
+  > {
+    const { rows } = await this.pg.query(`
       SELECT
-        ip.id_produto,
-        ip.subtotal,
-        p.data_pedido
+        to_char(p.data_pedido, 'YYYY-MM') as mes,
+        coalesce(cat.nome, 'Sem categoria') as categoria,
+        SUM(ip.subtotal)::numeric(12,2) as faturamento
       FROM itens_pedido ip
       JOIN pedidos p ON ip.id_pedido = p.id_pedido
+      LEFT JOIN categorias cat ON ip.id_categoria = cat.id_categoria
       WHERE p.status_pedido IN ('Entregue', 'Enviado')
+      GROUP BY mes, categoria
+      ORDER BY mes, categoria
     `);
-
-    // 2. Buscar todos os produtos do MongoDB
-    const produtos = await productRepo.findAll();
-    const produtosMap = new Map(produtos.map((p: any) => [String(p._id), p]));
-
-    // 3. Buscar todas as categorias
-    const categorias = await categoryRepo.findAll();
-    const categoriasMap = new Map(categorias.map((c: any) => [c.id_categoria, c.nome]));
-
-    // 4. Agrupar por mês e categoria
-    const resultado: Record<string, Record<string, number>> = {};
-
-    for (const item of itens) {
-      const produto = produtosMap.get(item.id_produto);
-      if (!produto) continue;
-
-      const mes = item.data_pedido.toISOString().slice(0, 7); // YYYY-MM
-
-      // Como agora temos array de categorias, vamos usar a primeira categoria
-      const categorias_produto = (produto as any).categorias;
-      const id_categoria =
-        categorias_produto && categorias_produto.length > 0 ? categorias_produto[0] : null;
-      const nome_categoria = id_categoria
-        ? categoriasMap.get(id_categoria) || 'Categoria desconhecida'
-        : 'Sem categoria';
-
-      if (!resultado[mes]) resultado[mes] = {};
-      if (!resultado[mes][nome_categoria]) resultado[mes][nome_categoria] = 0;
-
-      resultado[mes][nome_categoria] += Number(item.subtotal);
-    }
-
-    // 5. Transformar em array para resposta
-    const resposta = [];
-    for (const mes of Object.keys(resultado)) {
-      for (const categoria of Object.keys(resultado[mes])) {
-        resposta.push({
-          mes,
-          categoria,
-          faturamento: resultado[mes][categoria].toFixed(2),
-        });
-      }
-    }
-
-    return resposta.sort((a, b) => a.mes.localeCompare(b.mes));
+    return rows.map((row: any) => ({
+      mes: row.mes,
+      categoria: row.categoria,
+      faturamento: row.faturamento,
+    }));
   }
 }

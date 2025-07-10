@@ -1,9 +1,9 @@
 import { FastifyPluginAsync } from 'fastify';
 import { OrderRepository } from '@/repositories/order/OrderRepository';
-import { reportSchemas } from '@routes/reports/schema/report.schemas';
+import { reportSchemas } from '@/routes/analytics/schema/report.schemas';
 
 const topCustomersReportRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get('/reports/top-customers', {
+  fastify.get('/analytics/top-customers', {
     schema: reportSchemas.topCustomerReport(),
     preHandler: fastify.authenticate,
     handler: async (_request, reply) => {

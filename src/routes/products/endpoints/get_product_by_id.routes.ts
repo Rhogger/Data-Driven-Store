@@ -10,7 +10,7 @@ const getProductByIdRoutes: FastifyPluginAsync = async (fastify) => {
     preHandler: fastify.authenticate,
     handler: async (request, reply) => {
       try {
-        const productRepository = new ProductRepository(fastify, fastify.neo4j, fastify.redis);
+        const productRepository = new ProductRepository(fastify);
         const product = await productRepository.findById(request.params.id);
 
         if (!product) {

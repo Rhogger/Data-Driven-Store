@@ -24,14 +24,11 @@ export class CategoryRepository {
 
   async create(categoryData: CategoryCreateInput): Promise<CategoryRow> {
     const sql = `
-      INSERT INTO categorias (nome, id_categoria_pai)
-      VALUES ($1, $2)
+      INSERT INTO categorias (nome)
+      VALUES ($1)
       RETURNING *
     `;
-    const result = await this.pg.query<CategoryRow>(sql, [
-      categoryData.nome,
-      categoryData.id_categoria_pai || null,
-    ]);
+    const result = await this.pg.query<CategoryRow>(sql, [categoryData.nome]);
     return result.rows[0];
   }
 
