@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import createOrderRoutes from '@routes/orders/endpoints/create_order.routes';
-import listOrdersByClienteRoutes from '@routes/orders/endpoints/list_orders_by_cliente.routes';
+import listOrdersByClienteRoutes from '@/routes/orders/endpoints/list_orders_by_customer.routes';
 
 const orderRoutes = async (fastify: FastifyInstance) => {
   fastify.addHook('onRequest', async (request, reply) => {
