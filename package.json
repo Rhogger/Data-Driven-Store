@@ -5,6 +5,7 @@
   "main": "dist/src/index.js",
   "type": "commonjs",
   "scripts": {
+    "start:all": "./reset.sh",
     "clean": "rm -rf dist || sudo rm -rf dist",
     "build": "bash ./build.sh",
     "start": "node dist/index.js",
