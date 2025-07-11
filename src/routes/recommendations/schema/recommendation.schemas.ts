@@ -46,6 +46,11 @@ export const productRecommendationSchemas = {
                 type: 'integer',
                 description: 'Número total de produtos recomendados',
               },
+              algoritmo: {
+                type: 'string',
+                enum: ['frequencia'],
+                description: 'Tipo de algoritmo utilizado',
+              },
               recomendacoes: {
                 type: 'array',
                 items: {
@@ -59,20 +64,35 @@ export const productRecommendationSchemas = {
                       type: 'string',
                       description: 'Nome do produto',
                     },
+                    marca: {
+                      type: 'string',
+                      description: 'Marca do produto',
+                    },
+                    categoria: {
+                      type: 'string',
+                      description: 'Categoria do produto',
+                    },
                     score: {
                       type: 'number',
                       description: 'Score de recomendação (frequência ou peso)',
                     },
-                    motivo_recomendacao: {
-                      type: 'string',
-                      description: 'Motivo da recomendação',
+                    clientes_em_comum: {
+                      type: 'integer',
+                      description: 'Número de clientes que compraram ambos os produtos',
                     },
                   },
-                  required: ['id_produto', 'nome', 'score'],
+                  required: [
+                    'id_produto',
+                    'nome',
+                    'marca',
+                    'categoria',
+                    'score',
+                    'clientes_em_comum',
+                  ],
                 },
               },
             },
-            required: ['produto_base', 'total_recomendacoes', 'recomendacoes'],
+            required: ['produto_base', 'total_recomendacoes', 'algoritmo', 'recomendacoes'],
           },
         },
         required: ['success', 'data'],
@@ -176,12 +196,57 @@ export const productRecommendationSchemas = {
                       type: 'string',
                       description: 'Nome do produto',
                     },
+                    marca: {
+                      type: 'string',
+                      description: 'Marca do produto',
+                    },
+                    categoria: {
+                      type: 'string',
+                      description: 'Categoria do produto',
+                    },
                     score: {
                       type: 'number',
                       description: 'Score de recomendação baseado na similaridade dos clientes',
                     },
+                    recomendado_por: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id_cliente: {
+                            type: 'string',
+                            description: 'ID do cliente similar',
+                          },
+                          produtos_em_comum: {
+                            type: 'integer',
+                            description: 'Número de produtos em comum',
+                          },
+                          total_produtos_cliente: {
+                            type: 'integer',
+                            description: 'Total de produtos do cliente similar',
+                          },
+                          similaridade: {
+                            type: 'number',
+                            description: 'Score de similaridade com o cliente base',
+                          },
+                        },
+                        required: [
+                          'id_cliente',
+                          'produtos_em_comum',
+                          'total_produtos_cliente',
+                          'similaridade',
+                        ],
+                      },
+                    },
                   },
-                  required: ['id_produto', 'nome', 'score'],
+                  required: [
+                    'id_produto',
+                    'nome',
+                    'marca',
+                    'categoria',
+                    'score',
+                    'recomendado_por',
+                  ],
                 },
               },
             },
@@ -250,6 +315,13 @@ export const productRecommendationSchemas = {
           default: 6,
           description: 'Distância máxima permitida no caminho',
         },
+        algoritmo: {
+          type: 'string',
+          enum: ['shortest_path', 'categories_only'],
+          default: 'shortest_path',
+          description:
+            'Algoritmo a ser usado: shortest_path (usa categorias e marcas) ou categories_only (apenas categorias)',
+        },
       },
     },
     response: {
@@ -299,6 +371,10 @@ export const productRecommendationSchemas = {
                 type: 'integer',
                 description: 'Distância do caminho encontrado (-1 se não encontrado)',
               },
+              algoritmo_usado: {
+                type: 'string',
+                description: 'Método utilizado para encontrar o caminho',
+              },
               caminho: {
                 type: 'array',
                 items: {
@@ -321,22 +397,8 @@ export const productRecommendationSchemas = {
                       type: 'integer',
                       description: 'Posição do nó no caminho (0-based)',
                     },
-                    produto: {
-                      type: 'string',
-                      description: 'Nome do produto relacionado à marca (se aplicável)',
-                    },
                   },
-                  required: ['tipo', 'nome', 'posicao_no_caminho'],
-                  allOf: [
-                    {
-                      if: { properties: { tipo: { const: 'produto' } } },
-                      then: { required: ['id'] },
-                    },
-                    {
-                      if: { properties: { tipo: { const: 'categoria' } } },
-                      then: { required: ['id'] },
-                    },
-                  ],
+                  required: ['tipo', 'id', 'nome', 'posicao_no_caminho'],
                 },
               },
             },
@@ -345,6 +407,7 @@ export const productRecommendationSchemas = {
               'produto_destino',
               'caminho_encontrado',
               'distancia',
+              'algoritmo_usado',
               'caminho',
             ],
           },
@@ -443,35 +506,85 @@ export const productRecommendationSchemas = {
                       type: 'string',
                       description: 'ID do cliente influenciador',
                     },
-                    nome: {
-                      type: 'string',
-                      description: 'Nome do cliente influenciador',
-                    },
                     total_avaliacoes: {
                       type: 'integer',
                       description: 'Total de avaliações feitas pelo cliente',
                     },
-                    media_notas: {
+                    avaliacoes_positivas: {
+                      type: 'integer',
+                      description: 'Número de avaliações positivas (nota >= 4)',
+                    },
+                    taxa_avaliacoes_positivas: {
                       type: 'number',
-                      description: 'Média das notas dadas pelo cliente',
+                      description: 'Percentual de avaliações positivas',
                     },
                     produtos_avaliados: {
                       type: 'array',
                       items: { type: 'string' },
                       description: 'Lista de IDs dos produtos avaliados',
                     },
-                    influencia_score: {
-                      type: 'integer',
+                    impacto_vendas: {
+                      type: 'object',
+                      properties: {
+                        vendas_antes_avaliacao: {
+                          type: 'integer',
+                          description: 'Total de vendas antes das avaliações',
+                        },
+                        vendas_depois_avaliacao: {
+                          type: 'integer',
+                          description: 'Total de vendas depois das avaliações',
+                        },
+                        aumento_percentual: {
+                          type: 'number',
+                          description: 'Percentual de aumento nas vendas',
+                        },
+                      },
+                      required: [
+                        'vendas_antes_avaliacao',
+                        'vendas_depois_avaliacao',
+                        'aumento_percentual',
+                      ],
+                    },
+                    score_influencia: {
+                      type: 'number',
                       description: 'Score geral de influência do cliente',
+                    },
+                    produtos_impactados: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id_produto: { type: 'string' },
+                          nome_produto: { type: 'string' },
+                          nota_avaliacao: { type: 'number' },
+                          data_avaliacao: { type: 'string' },
+                          vendas_30_dias_antes: { type: 'integer' },
+                          vendas_30_dias_depois: { type: 'integer' },
+                          aumento_vendas: { type: 'integer' },
+                          percentual_aumento: { type: 'number' },
+                        },
+                        required: [
+                          'id_produto',
+                          'nome_produto',
+                          'nota_avaliacao',
+                          'data_avaliacao',
+                          'vendas_30_dias_antes',
+                          'vendas_30_dias_depois',
+                          'aumento_vendas',
+                          'percentual_aumento',
+                        ],
+                      },
                     },
                   },
                   required: [
                     'id_cliente',
-                    'nome',
                     'total_avaliacoes',
-                    'media_notas',
+                    'avaliacoes_positivas',
+                    'taxa_avaliacoes_positivas',
                     'produtos_avaliados',
-                    'influencia_score',
+                    'impacto_vendas',
+                    'score_influencia',
+                    'produtos_impactados',
                   ],
                 },
               },
@@ -521,7 +634,6 @@ export const productRecommendationSchemas = {
         clienteId: {
           type: 'string',
           description: 'ID do cliente para recomendações',
-          // example: 'CLI001',
         },
       },
       required: ['clienteId'],
@@ -549,77 +661,23 @@ export const productRecommendationSchemas = {
       200: {
         type: 'object',
         properties: {
-          success: {
-            type: 'boolean',
-            default: true,
-          },
+          success: { type: 'boolean', default: true },
           data: {
             type: 'object',
             properties: {
-              cliente_id: {
-                type: 'string',
-                description: 'ID do cliente base',
-              },
-              total_recomendacoes: {
-                type: 'integer',
-                description: 'Número total de produtos recomendados',
-              },
-              periodo_analise_dias: {
-                type: 'integer',
-                description: 'Período em dias usado para análise',
-              },
+              cliente_id: { type: 'string' },
+              total_recomendacoes: { type: 'integer' },
+              periodo_analise_dias: { type: 'integer' },
               recomendacoes: {
                 type: 'array',
                 items: {
                   type: 'object',
                   properties: {
-                    id_produto: {
-                      type: 'string',
-                      description: 'ID do produto recomendado',
-                    },
-                    nome: {
-                      type: 'string',
-                      description: 'Nome do produto',
-                    },
-                    marca: {
-                      type: 'string',
-                      description: 'Marca do produto',
-                    },
-                    categoria: {
-                      type: 'string',
-                      description: 'Categoria do produto',
-                    },
-                    score: {
-                      type: 'number',
-                      description: 'Score de recomendação baseado em visualizações',
-                    },
-                    categoria_visualizada: {
-                      type: 'object',
-                      properties: {
-                        id_categoria: {
-                          type: 'string',
-                          description: 'ID da categoria visualizada',
-                        },
-                        nome_categoria: {
-                          type: 'string',
-                          description: 'Nome da categoria visualizada',
-                        },
-                        total_visualizacoes: {
-                          type: 'integer',
-                          description: 'Total de visualizações da categoria',
-                        },
-                      },
-                      required: ['id_categoria', 'nome_categoria', 'total_visualizacoes'],
-                    },
+                    id_produto: { type: 'string' },
+                    id_categoria: { type: ['integer'] },
+                    score: { type: ['number'] },
                   },
-                  required: [
-                    'id_produto',
-                    'nome',
-                    'marca',
-                    'categoria',
-                    'score',
-                    'categoria_visualizada',
-                  ],
+                  required: ['id_produto', 'id_categoria', 'score'],
                 },
               },
             },

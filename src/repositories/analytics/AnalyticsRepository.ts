@@ -78,32 +78,90 @@ export class AnalyticsRepository {
     };
   }
 
-  async getConversionFunnelStats(): Promise<ConversionFunnelStats> {
-    const query = `SELECT * FROM ${this.keyspace}.funil_conversao_por_usuario_produto`;
-
+  async getConversionFunnelStats(): Promise<any> {
+    const query = `SELECT id_usuario, visualizou, adicionou_carrinho, comprou FROM ${this.keyspace}.funil_conversao_por_usuario_produto`;
     const result = await this.cassandraClient.execute(query);
 
-    const totalUsuarios = result.rows.length;
-    const usuariosVisualizaram = result.rows.filter((row) => row.visualizou).length;
-    const usuariosAdicionaramCarrinho = result.rows.filter((row) => row.adicionou_carrinho).length;
-    const usuariosCompraram = result.rows.filter((row) => row.comprou).length;
+    // Usar Set para garantir unicidade
+    const usuariosVisualizaram = new Set<number>();
+    const usuariosAdicionaramCarrinho = new Set<number>();
+    const usuariosCompraram = new Set<number>();
+    const todosUsuarios = new Set<number>();
 
-    const taxaConversaoVisualizacaoCarrinho =
-      usuariosVisualizaram > 0 ? (usuariosAdicionaramCarrinho / usuariosVisualizaram) * 100 : 0;
-    const taxaConversaoCarrinhoCompra =
-      usuariosAdicionaramCarrinho > 0 ? (usuariosCompraram / usuariosAdicionaramCarrinho) * 100 : 0;
-    const taxaConversaoGeral =
-      usuariosVisualizaram > 0 ? (usuariosCompraram / usuariosVisualizaram) * 100 : 0;
+    // Para estatísticas extras
+    const usuariosSomenteVisualizaram = new Set<number>();
+    const usuariosVisualizaramECarrinho = new Set<number>();
+    const usuariosCompletaramFunil = new Set<number>();
+    const usuariosAbandonaramCarrinho = new Set<number>();
+
+    // Map para saber o status de cada usuário
+    const userStatus: Record<
+      number,
+      { visualizou: boolean; adicionou: boolean; comprou: boolean }
+    > = {};
+
+    for (const row of result.rows) {
+      todosUsuarios.add(row.id_usuario);
+      if (!userStatus[row.id_usuario]) {
+        userStatus[row.id_usuario] = { visualizou: false, adicionou: false, comprou: false };
+      }
+      if (row.visualizou) {
+        usuariosVisualizaram.add(row.id_usuario);
+        userStatus[row.id_usuario].visualizou = true;
+      }
+      if (row.adicionou_carrinho) {
+        usuariosAdicionaramCarrinho.add(row.id_usuario);
+        userStatus[row.id_usuario].adicionou = true;
+      }
+      if (row.comprou) {
+        usuariosCompraram.add(row.id_usuario);
+        userStatus[row.id_usuario].comprou = true;
+      }
+    }
+
+    // Estatísticas extras
+    for (const [id, status] of Object.entries(userStatus)) {
+      const idNum = Number(id);
+      if (status.visualizou && !status.adicionou && !status.comprou) {
+        usuariosSomenteVisualizaram.add(idNum);
+      }
+      if (status.visualizou && status.adicionou && !status.comprou) {
+        usuariosVisualizaramECarrinho.add(idNum);
+      }
+      if (status.visualizou && status.adicionou && status.comprou) {
+        usuariosCompletaramFunil.add(idNum);
+      }
+      if (status.adicionou && !status.comprou) {
+        usuariosAbandonaramCarrinho.add(idNum);
+      }
+    }
+
+    const totalUsuarios = todosUsuarios.size;
+    const taxaVisualizacaoCarrinho =
+      usuariosVisualizaram.size > 0
+        ? (usuariosAdicionaramCarrinho.size / usuariosVisualizaram.size) * 100
+        : 0;
+    const taxaCarrinhoCompra =
+      usuariosAdicionaramCarrinho.size > 0
+        ? (usuariosCompraram.size / usuariosAdicionaramCarrinho.size) * 100
+        : 0;
+    const taxaVisualizacaoCompra =
+      usuariosVisualizaram.size > 0
+        ? (usuariosCompraram.size / usuariosVisualizaram.size) * 100
+        : 0;
 
     return {
       total_usuarios: totalUsuarios,
-      usuarios_visualizaram: usuariosVisualizaram,
-      usuarios_adicionaram_carrinho: usuariosAdicionaramCarrinho,
-      usuarios_compraram: usuariosCompraram,
-      taxa_conversao_visualizacao_carrinho:
-        Math.round(taxaConversaoVisualizacaoCarrinho * 100) / 100,
-      taxa_conversao_carrinho_compra: Math.round(taxaConversaoCarrinhoCompra * 100) / 100,
-      taxa_conversao_geral: Math.round(taxaConversaoGeral * 100) / 100,
+      usuarios_visualizaram: usuariosVisualizaram.size,
+      usuarios_adicionaram_carrinho: usuariosAdicionaramCarrinho.size,
+      usuarios_compraram: usuariosCompraram.size,
+      taxa_visualizacao_ate_carrinho: Math.round(taxaVisualizacaoCarrinho * 100) / 100,
+      taxa_carrinho_ate_compra: Math.round(taxaCarrinhoCompra * 100) / 100,
+      taxa_visualizacao_ate_compra: Math.round(taxaVisualizacaoCompra * 100) / 100,
+      usuarios_somente_visualizaram: usuariosSomenteVisualizaram.size,
+      usuarios_visualizaram_e_carrinho: usuariosVisualizaramECarrinho.size,
+      usuarios_completaram_funil: usuariosCompletaramFunil.size,
+      usuarios_abandonaram_carrinho: usuariosAbandonaramCarrinho.size,
     };
   }
 
@@ -154,29 +212,38 @@ export class AnalyticsRepository {
   // ============================================================================
 
   async getTopSearchTerms(limit: number = 10): Promise<TopSearchTerms> {
-    const query = `
-      SELECT termo_busca, SUM(total_contagem) as total_buscas
-      FROM ${this.keyspace}.termos_busca_agregados_por_dia
-      GROUP BY termo_busca
-    `;
-
-    const result = await this.cassandraClient.execute(query);
-
-    // Ordenar por total de buscas (descendente) e pegar os top 10
-    const termosOrdenados = result.rows
-      .map((row) => ({
-        termo_busca: row.termo_busca,
-        total_buscas: parseInt(row.total_buscas.toString(), 10),
-      }))
+    // Buscar os últimos 30 dias e agregar em memória
+    const termosMap = new Map<string, number>();
+    const hoje = new Date();
+    let total_termos_analisados = 0;
+    for (let i = 0; i < 30; i++) {
+      const data = new Date();
+      data.setDate(hoje.getDate() - i);
+      const cassandraDate = CassandraTypes.LocalDate.fromDate(data);
+      const query = `
+        SELECT termo_busca, total_contagem
+        FROM ${this.keyspace}.termos_busca_agregados_por_dia
+        WHERE data_evento = ?
+      `;
+      const result = await this.cassandraClient.execute(query, [cassandraDate]);
+      total_termos_analisados += result.rows.length;
+      result.rows.forEach((row) => {
+        const termo = row.termo_busca;
+        const contagem = Number(row.total_contagem);
+        if (termosMap.has(termo)) {
+          termosMap.set(termo, termosMap.get(termo)! + contagem);
+        } else {
+          termosMap.set(termo, contagem);
+        }
+      });
+    }
+    const termosOrdenados = Array.from(termosMap.entries())
+      .map(([termo, total]) => ({ termo_busca: termo, total_buscas: total }))
       .sort((a, b) => b.total_buscas - a.total_buscas)
       .slice(0, limit)
-      .map((termo, index) => ({
-        ...termo,
-        posicao_ranking: index + 1,
-      }));
-
+      .map((termo, index) => ({ ...termo, posicao_ranking: index + 1 }));
     return {
-      total_termos_analisados: result.rows.length,
+      total_termos_analisados,
       termos_mais_buscados: termosOrdenados,
     };
   }
@@ -186,11 +253,10 @@ export class AnalyticsRepository {
   // ============================================================================
 
   async getCampaignCTR(origemCampanha: string): Promise<CampaignCTRData> {
-    // Buscar visualizações (impressões)
     const visualizacoesQuery = `
       SELECT COUNT(*) as total_visualizacoes
       FROM ${this.keyspace}.eventos_por_data
-      WHERE origem_campanha = ? AND tipo_evento = 'visualizacao'
+      WHERE origem_campanha = ? AND tipo_evento = 'visualizou'
       ALLOW FILTERING
     `;
 
@@ -198,7 +264,6 @@ export class AnalyticsRepository {
       origemCampanha,
     ]);
 
-    // Buscar compras (cliques/conversões)
     const comprasQuery = `
       SELECT COUNT(*) as total_compras
       FROM ${this.keyspace}.compras_por_utm_source
@@ -235,14 +300,8 @@ export class AnalyticsRepository {
       WHERE origem_campanha = ?
     `;
     const params = [utmSource];
-    console.log('[DEBUG] Executando query Cassandra:', query, params);
     const result = await this.cassandraClient.execute(query, params, { prepare: true });
-    console.log('[DEBUG] Resultado bruto da query:', JSON.stringify(result, null, 2));
-    console.log('[DEBUG] Rows retornadas:', result.rows.length);
-    result.rows.forEach((row, idx) => {
-      console.log(`[DEBUG] Row #${idx}:`, JSON.stringify(row));
-    });
-    // Agrupa por usuário
+
     const usuariosMap = new Map<
       number,
       {
@@ -252,48 +311,89 @@ export class AnalyticsRepository {
         produtos_comprados: string[];
       }
     >();
-    result.rows.forEach((row, idx) => {
-      console.log(`[DEBUG] Processando row #${idx}:`, JSON.stringify(row));
+
+    result.rows.forEach((row) => {
       const userId = row.id_usuario;
       const dataEvento = row.timestamp_evento;
+
       if (usuariosMap.has(userId)) {
         const user = usuariosMap.get(userId)!;
         user.total_compras += 1;
         user.produtos_comprados.push(row.id_produto);
-        if (dataEvento < user.timestamp_primeira_compra) {
+        if (dataEvento < user.timestamp_primeira_compra)
           user.timestamp_primeira_compra = dataEvento;
-        }
-        console.log('[DEBUG] Atualizado usuario existente:', JSON.stringify(user));
-      } else {
+      } else
         usuariosMap.set(userId, {
           id_usuario: userId,
           timestamp_primeira_compra: dataEvento,
           total_compras: 1,
           produtos_comprados: [row.id_produto],
         });
-        console.log('[DEBUG] Novo usuario adicionado:', JSON.stringify(usuariosMap.get(userId)));
-      }
     });
+
     const usuarios = Array.from(usuariosMap.values())
       .sort((a, b) => b.total_compras - a.total_compras)
       .slice(0, limite)
-      .map((user, idx) => {
+      .map((user) => {
         const obj = {
           id_usuario: user.id_usuario.toString(),
           timestamp_primeira_compra: user.timestamp_primeira_compra?.toISOString?.() || '',
           total_compras: user.total_compras,
           produtos_comprados: user.produtos_comprados,
         };
-        console.log(`[DEBUG] Usuario agrupado #${idx}:`, JSON.stringify(obj));
         return obj;
       });
-    console.log('[DEBUG] usuarios agrupados final:', JSON.stringify(usuarios, null, 2));
+
     const response = {
       utm_source: utmSource,
       total_usuarios_compraram: usuarios.length,
       usuarios,
     };
-    console.log('[DEBUG] Response final retornado:', JSON.stringify(response, null, 2));
+
     return response;
+  }
+
+  // ============================================================================
+  // 6. Funil de conversão agrupado por usuário
+  // ============================================================================
+
+  async getConversionFunnelByUser() {
+    const query = `SELECT id_usuario, visualizou, adicionou_carrinho, comprou FROM ${this.keyspace}.funil_conversao_por_usuario_produto`;
+    const result = await this.cassandraClient.execute(query);
+    // Agrupa por usuário e soma os eventos
+    const funnelByUser: Record<
+      number,
+      { visualizou: number; adicionou_carrinho: number; comprou: number }
+    > = {};
+    for (const row of result.rows) {
+      const id = Number(row.id_usuario);
+      if (!funnelByUser[id]) {
+        funnelByUser[id] = { visualizou: 0, adicionou_carrinho: 0, comprou: 0 };
+      }
+      funnelByUser[id].visualizou += row.visualizou || 0;
+      funnelByUser[id].adicionou_carrinho += row.adicionou_carrinho || 0;
+      funnelByUser[id].comprou += row.comprou || 0;
+    }
+    // Calcula estatísticas por usuário
+    return Object.entries(funnelByUser).map(([id_usuario, stats]) => {
+      const visualizou = stats.visualizou;
+      const adicionou = stats.adicionou_carrinho;
+      const comprou = stats.comprou;
+      const taxa_visualizacao_ate_carrinho = visualizou > 0 ? (adicionou / visualizou) * 100 : 0;
+      const taxa_carrinho_ate_compra = adicionou > 0 ? (comprou / adicionou) * 100 : 0;
+      const taxa_visualizacao_ate_compra = visualizou > 0 ? (comprou / visualizou) * 100 : 0;
+      return {
+        id_usuario: Number(id_usuario),
+        visualizou,
+        adicionou_carrinho: adicionou,
+        comprou,
+        taxa_visualizacao_ate_carrinho: Math.round(taxa_visualizacao_ate_carrinho * 100) / 100,
+        taxa_carrinho_ate_compra: Math.round(taxa_carrinho_ate_compra * 100) / 100,
+        taxa_visualizacao_ate_compra: Math.round(taxa_visualizacao_ate_compra * 100) / 100,
+        completou_funil: visualizou > 0 && adicionou > 0 && comprou > 0,
+        abandonou_carrinho: adicionou > 0 && comprou === 0,
+        somente_visualizou: visualizou > 0 && adicionou === 0 && comprou === 0,
+      };
+    });
   }
 }

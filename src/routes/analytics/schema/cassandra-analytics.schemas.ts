@@ -1,4 +1,5 @@
 export const cassandraAnalyticsSchemas = {
+  // Funil de conversão geral
   getConversionFunnel: () => ({
     tags: ['Analytics'],
     security: [{ bearerAuth: [] }],
@@ -22,15 +23,106 @@ export const cassandraAnalyticsSchemas = {
                 type: 'integer',
                 description: 'Usuários que adicionaram ao carrinho',
               },
-              usuarios_compraram: { type: 'integer', description: 'Usuários que compraram' },
-              taxa_conversao_carrinho: {
-                type: 'number',
-                description: 'Taxa de conversão para carrinho (%)',
+              usuarios_compraram: {
+                type: 'integer',
+                description: 'Usuários que compraram',
               },
-              taxa_conversao_compra: {
+              taxa_visualizacao_ate_carrinho: {
                 type: 'number',
-                description: 'Taxa de conversão para compra (%)',
+                description: 'Taxa (%) de usuários que visualizaram e adicionaram ao carrinho',
               },
+              taxa_carrinho_ate_compra: {
+                type: 'number',
+                description: 'Taxa (%) de usuários que adicionaram ao carrinho e compraram',
+              },
+              taxa_visualizacao_ate_compra: {
+                type: 'number',
+                description: 'Taxa (%) de usuários que visualizaram e compraram',
+              },
+              usuarios_somente_visualizaram: {
+                type: 'integer',
+                description: 'Usuários que só visualizaram e não seguiram adiante',
+              },
+              usuarios_visualizaram_e_carrinho: {
+                type: 'integer',
+                description:
+                  'Usuários que visualizaram e adicionaram ao carrinho, mas não compraram',
+              },
+              usuarios_completaram_funil: {
+                type: 'integer',
+                description: 'Usuários que visualizaram, adicionaram ao carrinho e compraram',
+              },
+              usuarios_abandonaram_carrinho: {
+                type: 'integer',
+                description: 'Usuários que adicionaram ao carrinho mas não compraram',
+              },
+            },
+            additionalProperties: true,
+          },
+        },
+      },
+    },
+  }),
+
+  // Funil de conversão por usuário
+  getConversionFunnelByUser: () => ({
+    tags: ['Analytics'],
+    security: [{ bearerAuth: [] }],
+    summary: 'Funil de conversão agrupado por usuário',
+    description:
+      'Retorna um array de objetos, cada um com estatísticas detalhadas do funil de conversão para um usuário: totais, taxas e flags.',
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', default: true },
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id_usuario: {
+                  type: 'integer',
+                  description: 'ID do usuário',
+                },
+                visualizou: {
+                  type: 'integer',
+                  description: 'Total de visualizações',
+                },
+                adicionou_carrinho: {
+                  type: 'integer',
+                  description: 'Total de adições ao carrinho',
+                },
+                comprou: {
+                  type: 'integer',
+                  description: 'Total de compras',
+                },
+                taxa_visualizacao_ate_carrinho: {
+                  type: 'number',
+                  description: 'Taxa (%) de visualizações que viraram adição ao carrinho',
+                },
+                taxa_carrinho_ate_compra: {
+                  type: 'number',
+                  description: 'Taxa (%) de adições ao carrinho que viraram compra',
+                },
+                taxa_visualizacao_ate_compra: {
+                  type: 'number',
+                  description: 'Taxa (%) de visualizações que viraram compra',
+                },
+                completou_funil: {
+                  type: 'boolean',
+                  description: 'Se o usuário completou todas as etapas do funil',
+                },
+                abandonou_carrinho: {
+                  type: 'boolean',
+                  description: 'Se o usuário abandonou o carrinho (adicionou mas não comprou)',
+                },
+                somente_visualizou: {
+                  type: 'boolean',
+                  description: 'Se o usuário apenas visualizou e não seguiu adiante',
+                },
+              },
+              additionalProperties: false,
             },
           },
         },

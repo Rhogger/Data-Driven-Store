@@ -127,7 +127,7 @@ export const cartSchemas = {
           data: {
             type: 'object',
             properties: {
-              id_cliente: { type: 'string' },
+              id_cliente: { type: 'integer' },
               produtos: {
                 type: 'object',
                 additionalProperties: { type: 'integer' },
@@ -162,7 +162,7 @@ export const cartSchemas = {
             items: {
               type: 'object',
               properties: {
-                id_cliente: { type: 'string' },
+                id_cliente: { type: 'integer' },
                 produtos: {
                   type: 'object',
                   additionalProperties: { type: 'integer' },

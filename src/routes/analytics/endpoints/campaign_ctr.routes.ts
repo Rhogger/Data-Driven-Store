@@ -1,7 +1,6 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { cassandraAnalyticsSchemas } from '@routes/analytics/schema/cassandra-analytics.schemas';
-import { PurchasesByUtmRepository } from '@/repositories/purchases-by-utm/PurchasesByUtmRepository';
-// import { EventsByDateRepository } from '@/repositories/events-by-date/EventsByDateRepository';
+import { AnalyticsRepository } from '@/repositories/analytics/AnalyticsRepository';
 
 interface CampaignCTRParams {
   origemCampanha: string;
@@ -16,17 +15,12 @@ const getCampaignCTRRoute = async (fastify: FastifyInstance) => {
       reply: FastifyReply,
     ) => {
       try {
-        const purchasesRepo = new PurchasesByUtmRepository(fastify);
+        const analyticsRepo = new AnalyticsRepository(fastify);
         const { origemCampanha } = request.params;
-        const compras = await purchasesRepo.findByCampaignSource(origemCampanha);
-        const totalCliques = compras.length;
-
+        const ctrData = await analyticsRepo.getCampaignCTR(origemCampanha);
         return reply.code(200).send({
           success: true,
-          data: {
-            origem_campanha: origemCampanha,
-            total_cliques: totalCliques,
-          },
+          data: ctrData,
         });
       } catch (error: any) {
         request.log.error('Erro ao calcular CTR da campanha:', error);

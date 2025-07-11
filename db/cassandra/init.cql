@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS funil_conversao_por_usuario_produto (
     visualizou BOOLEAN,
     adicionou_carrinho BOOLEAN,
     comprou BOOLEAN,
-    timestamp_ultima_atualizacao TIMESTAMP,
     PRIMARY KEY (id_usuario, id_produto)
 );
 

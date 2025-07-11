@@ -16,7 +16,7 @@ export class CartRepository {
     await this.redis.set(cartKey, emptyCart, 'EX', this.CART_TTL);
   }
 
-  async addProduct(id_cliente: string, id_produto: string, quantidade: number = 1): Promise<void> {
+  async addProduct(id_cliente: number, id_produto: string, quantidade: number = 1): Promise<void> {
     const cartKey = `carrinho:${id_cliente}`;
     let cart: Record<string, number> = {};
     const cartStr = await this.redis.get(cartKey);
@@ -31,7 +31,7 @@ export class CartRepository {
     await this.redis.set(cartKey, JSON.stringify(cart), 'EX', this.CART_TTL);
   }
 
-  async removeProduct(id_cliente: string, id_produto: string): Promise<void> {
+  async removeProduct(id_cliente: number, id_produto: string): Promise<void> {
     const cartKey = `carrinho:${id_cliente}`;
     const cartStr = await this.redis.get(cartKey);
     if (!cartStr) return;
@@ -67,7 +67,7 @@ export class CartRepository {
     await this.redis.set(cartKey, JSON.stringify(cart), 'EX', this.CART_TTL);
   }
 
-  async findByClientId(id_cliente: string): Promise<CartData | null> {
+  async findByClientId(id_cliente: number): Promise<CartData | null> {
     const cartKey = `carrinho:${id_cliente}`;
     const cartStr = await this.redis.get(cartKey);
     if (!cartStr) return null;
@@ -83,8 +83,18 @@ export class CartRepository {
     }
   }
 
-  async clear(id_cliente: string): Promise<void> {
+  async clear(id_cliente: number): Promise<void> {
     const cartKey = `carrinho:${id_cliente}`;
     await this.redis.del(cartKey);
+  }
+  async getAllCarts(): Promise<CartData[]> {
+    const keys = await this.redis.keys('carrinho:*');
+    const carts: CartData[] = [];
+    for (const key of keys) {
+      const id_cliente: number = parseInt(key.replace('carrinho:', ''), 10);
+      const cart = await this.findByClientId(id_cliente);
+      if (cart) carts.push(cart);
+    }
+    return carts;
   }
 }

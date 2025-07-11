@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { cassandraAnalyticsSchemas } from '@routes/analytics/schema/cassandra-analytics.schemas';
-import { SearchTermsAggregatedRepository } from '@/repositories/search-terms-aggregated/SearchTermsAggregatedRepository';
+import { AnalyticsRepository } from '@/repositories/analytics/AnalyticsRepository';
 
 const getTopSearchTermsRoute = async (fastify: FastifyInstance) => {
   fastify.get('/analytics/top-search-terms', {
@@ -8,38 +8,11 @@ const getTopSearchTermsRoute = async (fastify: FastifyInstance) => {
     preHandler: fastify.authenticate,
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const searchTermsRepo = new SearchTermsAggregatedRepository(fastify);
-
-        const termosMap = new Map<string, number>();
-        const hoje = new Date();
-
-        for (let i = 0; i < 30; i++) {
-          const data = new Date();
-
-          data.setDate(hoje.getDate() - i);
-
-          const termosDia = await searchTermsRepo.findByDate(data);
-
-          termosDia.forEach((termo) => {
-            const termoAtual = termo.termo_busca;
-
-            const contagem = Number(termo.total_contagem);
-
-            if (termosMap.has(termoAtual))
-              termosMap.set(termoAtual, termosMap.get(termoAtual)! + contagem);
-            else termosMap.set(termoAtual, contagem);
-          });
-        }
-
-        const termosOrdenados = Array.from(termosMap.entries())
-          .map(([termo, total]) => ({ termo_busca: termo, total_buscas: total }))
-          .sort((a, b) => b.total_buscas - a.total_buscas)
-          .slice(0, 10)
-          .map((termo, index) => ({ ...termo, posicao_ranking: index + 1 }));
-
+        const analyticsRepo = new AnalyticsRepository(fastify);
+        const resultado = await analyticsRepo.getTopSearchTerms(10);
         return reply.code(200).send({
           success: true,
-          data: termosOrdenados,
+          data: resultado,
         });
       } catch (error: any) {
         request.log.error('Erro ao buscar termos de busca:', error);

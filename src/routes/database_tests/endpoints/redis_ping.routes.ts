@@ -6,7 +6,7 @@ const redisPingRoute = async (fastify: FastifyInstance) => {
     schema: databaseTestsSchemas.redisPing(),
     handler: async (_request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const result = await fastify.redis.ping();
+        const result = await fastify.ping();
         return reply.send({ ping: result, status: 'ok' });
       } catch (err: any) {
         return reply.status(500).send({ ping: 'error', error: err?.message || 'Unknown error' });

@@ -33,7 +33,7 @@ const addItemToCartRoutes = async (fastify: FastifyInstance) => {
       if (!product)
         return reply.status(404).send({ success: false, message: 'Produto não encontrado.' });
 
-      const cartRepo = new CartRepository(fastify.redis);
+      const cartRepo = new CartRepository(fastify);
       const cart = await cartRepo.findByClientId(id_cliente);
 
       const quantidadeNoCarrinho = cart?.produtos?.[id_produto] ?? 0;

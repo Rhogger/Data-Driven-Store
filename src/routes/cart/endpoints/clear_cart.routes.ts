@@ -11,7 +11,7 @@ const clearCartRoutes = async (fastify: FastifyInstance) => {
       if (!id_cliente) {
         return reply.status(401).send({ success: false, message: 'Usuário não autenticado.' });
       }
-      const cartRepo = new CartRepository(fastify.redis);
+      const cartRepo = new CartRepository(fastify);
       await cartRepo.clear(id_cliente);
 
       return reply.send({ success: true, message: 'Carrinho limpo com sucesso.' });

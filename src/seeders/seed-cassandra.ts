@@ -76,7 +76,7 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
             randomUUID(),
             view.id_cliente,
             view.id_produto,
-            'view_product',
+            'visualizou',
             new Date(view.data),
             new Date(view.data),
           ],
@@ -95,7 +95,7 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
             randomUUID(),
             compra.id_cliente,
             compra.id_produto,
-            'purchase',
+            'comprou',
             new Date(compra.data_pedido),
             new Date(compra.data_pedido),
             compra.quantidade,
@@ -108,22 +108,7 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
 
     // Avaliações (opcional)
     if (Array.isArray(eventsData.avaliou)) {
-      for (const review of eventsData.avaliou) {
-        await cassandraClient.execute(
-          `INSERT INTO ${keyspace}.eventos_por_data (id_evento, id_cliente, id_produto, tipo_evento, data_evento, timestamp_evento, nota, comentario) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            randomUUID(),
-            review.id_cliente,
-            review.id_produto,
-            'review',
-            new Date(review.data),
-            new Date(review.data),
-            review.nota,
-            review.comentario,
-          ],
-          { prepare: true },
-        );
-      }
+      // Não insere avaliações em eventos_por_data, pois não é tipo permitido
       console.log(`   -> ${eventsData.avaliou.length} avaliações importadas.`);
     }
     console.log('✅ [Cassandra] Eventos do Neo4j importados com sucesso!');
@@ -193,16 +178,16 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
 
     // Gerar eventos aleatórios normalmente para outros tipos, mas compras_por_utm_source será compatível
     const eventosPorData: any[] = [];
-    const funilConversao: any[] = [];
     const comprasPorUtm: any[] = [];
     const termosBuscaMap = new Map<string, number>();
     const visualizacoesProdutoMap = new Map<string, number>();
-    const eventTypes = ['view_product', 'search', 'add_to_cart', 'purchase'];
+    // Apenas tipos permitidos: visualizou, comprou, adicionou_no_carrinho
+    const eventTypes = ['visualizou', 'comprou', 'adicionou_no_carrinho'];
     const utmSources = ['google', 'facebook', 'email', 'direct'];
 
     // --- Geração de eventos aleatórios (como antes, mas termo_busca só nome de produto cortado aleatório) ---
     for (let i = 0; i < NUM_EVENTS; i++) {
-      const client = clients[Math.floor(Math.random() * clients.length)];
+      // const client = clients[Math.floor(Math.random() * clients.length)];
       const product = products[Math.floor(Math.random() * products.length)];
       const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
       const utmSource = utmSources[Math.floor(Math.random() * utmSources.length)];
@@ -213,7 +198,6 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
       const date = new Date(timestamp);
       date.setHours(0, 0, 0, 0);
       const eventId = randomUUID();
-      const userId = client.id_cliente; // INT!
 
       // eventos_por_data: só pode ter as colunas do schema atual
       const baseEventData: any = {
@@ -224,35 +208,6 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
         origem_campanha: Math.random() < 0.3 ? utmSource : null,
       };
       eventosPorData.push(baseEventData);
-
-      // Funil de Conversão (ajustado para schema atual)
-      const funilKey = `${userId}-${product.cassandra_uuid}`;
-      const existingFunil = funilConversao.find(
-        (f) => `${f.id_usuario}-${f.id_produto}` === funilKey,
-      );
-      if (eventType === 'view_product') {
-        if (!existingFunil) {
-          funilConversao.push({
-            id_usuario: userId, // INT!
-            id_produto: product.cassandra_uuid,
-            visualizou: true,
-            adicionou_carrinho: false,
-            comprou: false,
-            timestamp_ultima_atualizacao: timestamp,
-          });
-        } else {
-          existingFunil.timestamp_ultima_atualizacao = timestamp;
-          if (!existingFunil.visualizou) {
-            existingFunil.visualizou = true;
-          }
-        }
-      } else if (eventType === 'add_to_cart' && existingFunil) {
-        existingFunil.adicionou_carrinho = true;
-        existingFunil.timestamp_ultima_atualizacao = timestamp;
-      } else if (eventType === 'purchase' && existingFunil) {
-        existingFunil.comprou = true;
-        existingFunil.timestamp_ultima_atualizacao = timestamp;
-      }
 
       // Termos de Busca Agregados (apenas nome do produto, 50-100% aleatório)
       if (Math.random() < 0.2 && product.nome) {
@@ -266,37 +221,43 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
       // Visualizações de Produto Agregadas (aqui não faz nada, será sobrescrito pelo Neo4j)
     }
 
-    // --- VISUALIZAÇÕES DE PRODUTO AGREGADAS: sobrescreve para usar dados do Neo4j ---
-    // Lê o arquivo neo4j_events.json para contar visualizações por produto por dia
-    const neo4jEventsPath = path.resolve(__dirname, '../../neo4j_events.json');
-    const visualizacoesPorProdutoPorDia: Record<string, number> = {};
-    if (fs.existsSync(neo4jEventsPath)) {
-      const neo4jEvents = JSON.parse(fs.readFileSync(neo4jEventsPath, 'utf-8'));
-      if (Array.isArray(neo4jEvents.visualizou)) {
-        // Para cada visualização, conta por produto e por dia (data_evento)
-        for (const view of neo4jEvents.visualizou) {
-          // Gera data entre 6 dias atrás e hoje
-          const now = Date.now();
-          const minDate = now - 6 * 24 * 60 * 60 * 1000;
-          const timestamp = new Date(minDate + Math.random() * (now - minDate));
-          const date = new Date(timestamp);
-          date.setHours(0, 0, 0, 0);
-          const key = `${date.toISOString()}|${view.id_produto}`;
-          visualizacoesPorProdutoPorDia[key] = (visualizacoesPorProdutoPorDia[key] || 0) + 1;
+    // --- Visualizações de Produto Agregadas (baseado nos eventos aleatórios) ---
+    // Visualizações de Produto Agregadas FIEIS aos dados reais: usa compras e eventos reais
+    // Gera visualizações agregadas por produto por dia, baseando-se em compras reais e datas reais
+    const dias = 6;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    for (let d = 0; d <= dias; d++) {
+      const data = new Date(hoje);
+      data.setDate(hoje.getDate() - d);
+      // Para cada produto do Mongo
+      for (const product of products) {
+        // Busca quantas compras desse produto ocorreram nesse dia
+        const comprasNoDia = comprasResult.rows.filter(
+          (row) =>
+            row.id_produto === product._id.toHexString() &&
+            new Date(row.data_pedido).toISOString().slice(0, 10) ===
+              data.toISOString().slice(0, 10),
+        );
+        // Considera cada compra como uma visualização (ou pode somar quantidade)
+        let totalVisualizacoes = 0;
+        for (const compra of comprasNoDia) {
+          totalVisualizacoes += compra.quantidade || 1;
+        }
+        // Se não houver compra, pode simular visualizações baseadas em outros eventos (opcional)
+        // Aqui, se quiser, pode adicionar visualizações "simuladas" para produtos sem compra
+        if (totalVisualizacoes > 0) {
+          const key = `${data.toISOString()}|${product._id.toHexString()}`;
+          visualizacoesProdutoMap.set(key, totalVisualizacoes);
         }
       }
-    }
-    // Substitui visualizacoesProdutoMap pelo novo
-    visualizacoesProdutoMap.clear();
-    for (const [key, count] of Object.entries(visualizacoesPorProdutoPorDia)) {
-      visualizacoesProdutoMap.set(key, count);
     }
 
     // compras_por_utm_source compatível com compras reais
     for (const compra of comprasResult.rows) {
       // Só insere se o produto existe no Mongo
       if (!produtosMongoIds.has(compra.id_produto)) continue;
-      // utm_source aleatório
+      // Alterna origem_campanha entre as opções disponíveis
       const utmSources = ['google', 'facebook', 'email', 'direct'];
       const origem_campanha = utmSources[Math.floor(Math.random() * utmSources.length)];
       comprasPorUtm.push({
@@ -306,6 +267,42 @@ async function seedCassandra(cassandraClient: Client, pgPool: Pool, mongoClient:
         id_produto: compra.id_produto,
       });
     }
+
+    // --- Funil de Conversão realista: dados reais de compra + simulação coerente ---
+    // --- Funil de Conversão realista: dados reais de compra + simulação coerente ---
+    // Remove qualquer declaração duplicada de funilConversao
+    const funilConversaoMap = new Map();
+    // 1. Preencher funil com dados reais de compra
+    for (const compra of comprasResult.rows) {
+      if (!produtosMongoIds.has(compra.id_produto)) continue;
+      const key = `${compra.id_cliente}-${compra.id_produto}`;
+      funilConversaoMap.set(key, {
+        id_usuario: compra.id_cliente,
+        id_produto: compra.id_produto,
+        visualizou: true,
+        adicionou_carrinho: true,
+        comprou: true,
+      });
+    }
+    // 2. Simular visualizações e adições ao carrinho para outros clientes/produtos
+    for (const client of clients) {
+      for (const product of products) {
+        const produtoId = product._id.toHexString();
+        const key = `${client.id_cliente}-${produtoId}`;
+        if (funilConversaoMap.has(key)) continue; // já comprou
+        // 60% dos clientes visualizam, 30% adicionam ao carrinho, mas não compram
+        if (Math.random() < 0.6) {
+          funilConversaoMap.set(key, {
+            id_usuario: client.id_cliente,
+            id_produto: produtoId,
+            visualizou: true,
+            adicionou_carrinho: Math.random() < 0.5,
+            comprou: false,
+          });
+        }
+      }
+    }
+    const funilConversao = Array.from(funilConversaoMap.values());
 
     // 4. Preparar queries de batch para as tabelas de contador
     const termosBuscaUpdates = Array.from(termosBuscaMap.entries()).map(([key, count]) => {

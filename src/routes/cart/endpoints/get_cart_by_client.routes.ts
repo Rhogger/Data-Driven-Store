@@ -5,13 +5,13 @@ import { cartSchemas } from '../schema/cart.schemas';
 const getCartByClientRoute = async (fastify: FastifyInstance) => {
   fastify.get('/cart/me', {
     schema: cartSchemas.getCartByClient(),
-    preValidation: [fastify.authenticate],
+    preHandler: fastify.authenticate,
     handler: async (request: FastifyRequest, reply: FastifyReply) => {
       const id_cliente = (request.user as any)?.id_cliente;
 
       if (!id_cliente) return reply.status(401).send({ success: false, error: 'Token inválido' });
 
-      const cartRepo = new CartRepository(fastify.redis);
+      const cartRepo = new CartRepository(fastify);
       const cart = await cartRepo.findByClientId(id_cliente);
 
       if (!cart)

@@ -1,6 +1,6 @@
 export interface CartData {
-  id_cliente: string;
-  produtos: Record<string, number>; // { id_produto: quantidade }
+  id_cliente: number;
+  produtos: Record<string, number>;
 }
 
 export interface CartItem {

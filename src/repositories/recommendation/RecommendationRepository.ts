@@ -29,12 +29,11 @@ export class RecommendationRepository {
         LIMIT ${limit}
       `;
 
-      const result = await session.run(query, { id_produto, limit });
+      const result = await session.run(query);
 
       return result.records.map((record) => ({
         id_produto: record.get('id_produto'),
         score: record.get('frequencia').toNumber(),
-        motivo_recomendacao: 'Frequentemente comprados juntos',
       }));
     } catch {
       return [];
@@ -50,69 +49,68 @@ export class RecommendationRepository {
   ): Promise<RecommendedProduct[]> {
     const session: Session = this.neo4jDriver.session();
 
-    // eslint-disable-next-line no-console
-    console.log('[getCategoryBasedRecommendations] called with:', clienteId, limite, diasAnalise);
-
     try {
       const query = `
-        MATCH (cliente:Cliente {id_cliente: ${clienteId}})-[:COMPROU]->(produtos_comprados:Produto)
-        WITH cliente, collect(DISTINCT produtos_comprados.id_produto) as produtos_ja_comprados
+        MATCH (c:Cliente {id_cliente: ${clienteId}})
+        OPTIONAL MATCH (c)-[:COMPROU]->(pComprado:Produto)
+        WITH c, collect(DISTINCT pComprado.id_produto) AS produtos_ja_comprados
 
-        MATCH (cliente)-[visualizacao:VISUALIZOU]->(produtos_visualizados:Produto)
-        WHERE visualizacao.data_visualizacao >= date() - duration({days: ${diasAnalise}})
+        MATCH (c)-[v:VISUALIZOU]->(pVisualizado:Produto)
+        WHERE v.data IS NOT NULL
+          AND datetime(v.data) >= datetime() - duration({days: ${diasAnalise}})
 
-        MATCH (produtos_visualizados)-[:PERTENCE_A]->(categoria_visualizada:Categoria)
+        MATCH (pVisualizado)-[:PERTENCE_A]->(cat:Categoria)
+        WHERE NOT EXISTS {
+          MATCH (c)-[:COMPROU]->(pComprou:Produto)-[:PERTENCE_A]->(catComprada:Categoria)
+          WHERE catComprada = cat
+        }
 
-        WITH cliente, produtos_ja_comprados,
-            categoria_visualizada,
-            count(DISTINCT visualizacao) as total_visualizacoes_categoria,
-            collect(DISTINCT produtos_visualizados.id_produto) as produtos_visualizados_categoria
+        MATCH (produto:Produto)-[:PERTENCE_A]->(cat)
+        WHERE NOT produto.id_produto IN produtos_ja_comprados
 
-        MATCH (produtos_categoria:Produto)-[:PERTENCE_A]->(categoria_visualizada)
-        MATCH (produtos_categoria)-[:PRODUZIDO_POR]->(marca:Marca)
-
-        WHERE NOT produtos_categoria.id_produto IN produtos_ja_comprados
-          AND NOT produtos_categoria.id_produto IN produtos_visualizados_categoria
-
-        OPTIONAL MATCH (outros_clientes:Cliente)-[:COMPROU]->(produtos_categoria)
-        WITH cliente, produtos_ja_comprados, categoria_visualizada, total_visualizacoes_categoria,
-            produtos_categoria, marca,
-            count(DISTINCT outros_clientes) as popularidade_produto
-
-        WITH cliente, categoria_visualizada, total_visualizacoes_categoria,
-            produtos_categoria, marca,
-            round((total_visualizacoes_categoria * 0.7 + popularidade_produto * 0.3), 2) as score_final
-
-        ORDER BY score_final DESC, produtos_categoria.nome ASC
+        OPTIONAL MATCH (outro:Cliente)-[:COMPROU]->(produto)
+        WITH produto, cat, count(DISTINCT outro) AS popularidade
+        ORDER BY popularidade DESC
         LIMIT ${limite}
 
-        RETURN produtos_categoria.id_produto as id_produto,
-              produtos_categoria.nome as nome,
-              produtos_categoria.preco as preco,
-              score_final as score
+        RETURN produto.id_produto AS id_produto,
+               cat.id_categoria AS id_categoria,
+               popularidade
       `;
 
-      const result = await session.run(query, {
-        clienteId,
-        limite,
-        diasAnalise,
+      const result = await session.run(query);
+
+      const mapped = result.records.map((record) => {
+        let id_produto = record.get('id_produto');
+        let id_categoria = record.get('id_categoria');
+        let score = record.get('popularidade');
+
+        id_produto = id_produto !== undefined && id_produto !== null ? String(id_produto) : null;
+
+        // id_categoria deve ser integer ou null
+        if (id_categoria !== undefined && id_categoria !== null) {
+          if (typeof id_categoria === 'object' && typeof id_categoria.toNumber === 'function') {
+            id_categoria = id_categoria.toNumber();
+          } else if (typeof id_categoria === 'string' && !isNaN(Number(id_categoria))) {
+            id_categoria = Number(id_categoria);
+          }
+        } else {
+          id_categoria = null;
+        }
+
+        if (score && typeof score.toNumber === 'function') {
+          score = score.toNumber();
+        } else if (typeof score !== 'number') {
+          score = null;
+        }
+
+        return {
+          id_produto,
+          id_categoria,
+          score,
+        };
       });
 
-      // eslint-disable-next-line no-console
-      console.log(
-        '[getCategoryBasedRecommendations] Neo4j result:',
-        JSON.stringify(result.records, null, 2),
-      );
-
-      const mapped = result.records.map((record) => ({
-        id_produto: record.get('id_produto'),
-        nome: record.get('nome'),
-        preco: record.get('preco'),
-        score: record.get('score'),
-        motivo_recomendacao: 'Baseado nas categorias visualizadas',
-      }));
-      // eslint-disable-next-line no-console
-      console.log('[getCategoryBasedRecommendations] mapped result:', mapped);
       return mapped;
     } catch {
       return [];
@@ -266,10 +264,7 @@ export class RecommendationRepository {
                round(score_total, 2) as score
       `;
 
-      const result = await session.run(query, {
-        clienteId,
-        minSimilaridade,
-      });
+      const result = await session.run(query);
 
       const mapped = result.records.map((record) => {
         const obj = {
