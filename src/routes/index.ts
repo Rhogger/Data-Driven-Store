@@ -9,6 +9,9 @@ import orderRoutes from '@routes/orders/order.routes';
 import recommendationRoutes from '@routes/recommendations/recommendation.routes';
 import analyticsRoutes from '@routes/analytics/analytics.routes';
 import cartRoutes from '@routes/cart/cart.routes';
+import citiesRoutes from '@routes/cities/cities.routes';
+import statesRoutes from '@routes/states/states.routes';
+import customersRoutes from '@routes/customers/customers.routes';
 
 export default async function apiRoutes(fastify: FastifyInstance) {
   fastify.register(healthCheckRoutes);
@@ -21,4 +24,7 @@ export default async function apiRoutes(fastify: FastifyInstance) {
   fastify.register(recommendationRoutes);
   fastify.register(analyticsRoutes);
   fastify.register(cartRoutes);
+  fastify.register(citiesRoutes);
+  fastify.register(statesRoutes);
+  fastify.register(customersRoutes);
 }

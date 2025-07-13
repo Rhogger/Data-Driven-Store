@@ -109,6 +109,13 @@ export class CustomerRepository {
     return result.rows.length > 0;
   }
 
+  async findAll(): Promise<CustomerRow[]> {
+    const result = await this.pg.query<CustomerRow>(
+      'SELECT * FROM clientes ORDER BY id_cliente ASC',
+    );
+    return result.rows;
+  }
+
   // ============================================================================
   // Neo4j Operations (Relacionamentos e comportamentos)
   // ============================================================================
