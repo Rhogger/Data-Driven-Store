@@ -260,62 +260,39 @@ export class ProductRepository {
 
   // ===== NEO4J OPERATIONS =====
 
-  async createProductNodeNeo4j(product: any): Promise<void> {
-    const session = this.neo4jDriver.session();
+  async createProductNodeNeo4j(product: any, tx?: any): Promise<void> {
+    const session = tx || this.neo4jDriver.session();
     try {
-      await session.run(
-        `CREATE (p:Produto {
-          id_produto: $id_produto,
-          nome: $nome,
-          preco: $preco,
-          marca: $marca,
-          estoque: $estoque,
-          criado_em: datetime($criado_em)
-        })`,
-        {
-          id_produto: product.id_produto,
-          nome: product.nome,
-          preco: product.preco,
-          marca: product.marca,
-          estoque: product.estoque,
-          criado_em: (product.created_at || new Date()).toISOString(),
-        },
-      );
-
-      if (Array.isArray(product.categorias)) {
-        for (const categoriaId of product.categorias) {
-          await session.run(
-            `MATCH (p:Produto {id_produto: $id_produto})
-             MERGE (c:Categoria {id_categoria: $id_categoria})
-             MERGE (p)-[:PERTENCE_A]->(c)`,
-            {
-              id_produto: product.id_produto,
-              id_categoria: categoriaId,
-            },
-          );
-        }
-      }
+      const query = 'CREATE (p:Produto {id_produto: $id_produto}) RETURN p';
+      await session.run(query, {
+        id_produto: product.id_produto,
+      });
     } finally {
-      await session.close();
+      if (!tx) await (session as any).close();
     }
   }
 
-  async createRelationships(productId: string, categoryId: string, brandId: string): Promise<void> {
-    const session = this.neo4jDriver.session();
+  async createRelationships(
+    productId: string,
+    categoryId: string,
+    brandName: string,
+    tx?: any,
+  ): Promise<void> {
+    const session = tx || this.neo4jDriver.session();
 
     try {
       await session.run(
         `
-        MERGE (p:Product {id: $productId})
-        MERGE (c:Category {id: $categoryId})
-        MERGE (b:Brand {id: $brandId})
+        MATCH (p:Produto {id_produto: $productId})
+        MATCH (c:Categoria {id_categoria: $categoryId})
+        MATCH (m:Marca {nome: $brandName})
         MERGE (p)-[:PERTENCE_A]->(c)
-        MERGE (p)-[:PRODUZIDO_POR]->(b)
+        MERGE (p)-[:PRODUZIDO_POR]->(m)
         `,
-        { productId, categoryId, brandId },
+        { productId, categoryId, brandName },
       );
     } finally {
-      await session.close();
+      if (!tx) await session.close();
     }
   }
 

@@ -96,7 +96,7 @@ const shortestPathRoutes: FastifyPluginAsync = async (fastify) => {
 
         const idsProdutosCaminho = produtosNoCaminho.map((n: any) => n.id);
         const idsCategoriasCaminho = categoriasNoCaminho.map((n: any) => n.id);
-        const idsMarcasCaminho = marcasNoCaminho.map((n: any) => n.id);
+        const idsMarcasCaminho = marcasNoCaminho.map((n: any) => n.id); // são nomes, não IDs
 
         const categoryRepo = new CategoryRepository(fastify);
         const brandRepo = new BrandRepository(fastify);
@@ -108,7 +108,7 @@ const shortestPathRoutes: FastifyPluginAsync = async (fastify) => {
           idsCategoriasCaminho.map((id: string) => categoryRepo.findById(Number(id))),
         );
         const marcasDb = await Promise.all(
-          idsMarcasCaminho.map((id: string) => brandRepo.findById(id)),
+          idsMarcasCaminho.map((nome: string) => brandRepo.findByName(nome)),
         );
 
         const caminhoComNomes = caminhoArray.map((n: any) => {
@@ -132,7 +132,7 @@ const shortestPathRoutes: FastifyPluginAsync = async (fastify) => {
             let nomeMarca = null;
             const idx = idsMarcasCaminho.indexOf(n.id);
             if (idx !== -1) {
-              nomeMarca = marcasDb[idx]?.nome || n.nome || null;
+              nomeMarca = marcasDb[idx]?.nome || n.id || null; // usa n.id como fallback já que é o nome
             }
             // Se ainda não encontrou, tenta buscar pelo produto anterior
             if (!nomeMarca) {
@@ -141,8 +141,8 @@ const shortestPathRoutes: FastifyPluginAsync = async (fastify) => {
                 const idProdutoAnterior = caminhoArray[idxNoCaminho - 1].id;
                 const idxProdutoAnterior = idsProdutosCaminho.indexOf(idProdutoAnterior);
                 const produtoAnterior = produtosMongo[idxProdutoAnterior];
-                if (produtoAnterior && produtoAnterior.marca && produtoAnterior.marca.nome) {
-                  nomeMarca = produtoAnterior.marca.nome;
+                if (produtoAnterior && produtoAnterior.marca) {
+                  nomeMarca = produtoAnterior.marca; // marca é string no produto
                 }
               }
             }

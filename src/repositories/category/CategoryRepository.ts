@@ -1,13 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { Pool } from 'pg';
-import { Driver, Session } from 'neo4j-driver';
-import {
-  CategoryRow,
-  CategoryCreateInput,
-  Category,
-  CreateNodeResult,
-  DeleteNodeResult,
-} from './CategoryInterfaces';
+import { Driver, Session, Transaction } from 'neo4j-driver';
+import { CategoryRow, CategoryCreateInput, Category, DeleteNodeResult } from './CategoryInterfaces';
 
 export class CategoryRepository {
   private pg: Pool;
@@ -56,49 +50,16 @@ export class CategoryRepository {
   // Neo4j Operations (Relacionamentos e análises)
   // ============================================================================
 
-  async createCategoryNode(category: Category): Promise<CreateNodeResult> {
-    const session: Session = this.neo4jDriver.session();
-
+  async createCategoryNode(category: Category, tx?: Session | Transaction): Promise<void> {
+    const session = tx || this.neo4jDriver.session();
     try {
-      const query = `
-        CREATE (c:Categoria {
-          id_categoria: $id_categoria,
-          nome: $nome,
-          descricao: $descricao,
-          ativa: $ativa
-        })
-        RETURN c.id_categoria as id_categoria
-      `;
-
-      const result = await session.run(query, {
+      const query = 'CREATE (c:Categoria {id_categoria: $id_categoria, nome: $nome}) RETURN c';
+      await session.run(query, {
         id_categoria: category.id_categoria,
         nome: category.nome,
-        descricao: category.descricao || null,
-        ativa: category.ativa,
       });
-
-      if (result.records.length > 0) {
-        return {
-          success: true,
-          created: true,
-          message: 'Categoria criada com sucesso no Neo4j',
-          id: result.records[0].get('id_categoria'),
-        };
-      }
-
-      return {
-        success: false,
-        created: false,
-        message: 'Falha ao criar categoria no Neo4j',
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        created: false,
-        message: `Erro ao criar categoria no Neo4j: ${error.message}`,
-      };
     } finally {
-      await session.close();
+      if (!tx) await (session as Session).close();
     }
   }
 
@@ -162,32 +123,21 @@ export class CategoryRepository {
     }
   }
 
-  async getMostPopularCategories(limit: number = 10): Promise<any[]> {
-    const session: Session = this.neo4jDriver.session();
-
+  async findByIdNeo4j(id_categoria: string, tx?: Session | Transaction): Promise<Category | null> {
+    const session = tx || this.neo4jDriver.session();
     try {
-      const query = `
-        MATCH (c:Categoria)<-[:PERTENCE_A]-(p:Produto)<-[comprou:COMPROU]-(cliente:Cliente)
-        RETURN c.id_categoria as id_categoria,
-               c.nome as nome,
-               count(comprou) as total_vendas,
-               sum(comprou.valor) as valor_total
-        ORDER BY total_vendas DESC
-        LIMIT $limit
-      `;
-
-      const result = await session.run(query, { limit });
-
-      return result.records.map((record) => ({
-        id_categoria: record.get('id_categoria'),
-        nome: record.get('nome'),
-        total_vendas: record.get('total_vendas').toNumber(),
-        valor_total: record.get('valor_total').toNumber(),
-      }));
-    } catch {
-      return [];
+      const query = 'MATCH (c:Categoria {id_categoria: $id_categoria}) RETURN c';
+      const result = await session.run(query, { id_categoria });
+      if (result.records.length > 0) {
+        const catNode = result.records[0].get('c').properties;
+        return {
+          id_categoria: catNode.id_categoria,
+          nome: catNode.nome,
+        };
+      }
+      return null;
     } finally {
-      await session.close();
+      if (!tx) await (session as Session).close();
     }
   }
 }

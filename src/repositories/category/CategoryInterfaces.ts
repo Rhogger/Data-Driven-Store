@@ -19,8 +19,6 @@ export interface CategoryCreateInput {
 export interface Category {
   id_categoria: string;
   nome: string;
-  descricao?: string;
-  ativa: boolean;
 }
 
 export interface CreateNodeResult {

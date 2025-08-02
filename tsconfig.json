@@ -14,7 +14,8 @@
       "@config/*": ["src/config/*"],
       "@plugins/*": ["src/plugins/*"],
       "@repositories/*": ["src/repositories/*"],
-      "@routes/*": ["src/routes/*"]
+      "@routes/*": ["src/routes/*"],
+      "@services/*": ["src/services/*"]
     }
   },
   "include": ["src/**/*.ts", "src/types/**/*.d.ts", "db/**/*.ts"],
