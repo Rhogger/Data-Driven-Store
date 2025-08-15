@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
-import { ProductRepository } from '@repositories/product/ProductRepository';
 import { productSchemas } from '@routes/products/schema/product.schemas';
+import { UpdateProductService } from '@services/products/update_product';
 
 interface UpdateProductInput {
   nome?: string;
@@ -63,8 +63,8 @@ const updateProductRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        const productRepository = new ProductRepository(fastify);
-        const product = await productRepository.update(request.params.id, request.body);
+        const updateService = new UpdateProductService(fastify);
+        const product = await updateService.updateProductAtomic(request.params.id, request.body);
 
         if (!product) {
           return reply.status(404).send({

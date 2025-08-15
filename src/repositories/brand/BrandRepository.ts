@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
-import { Driver, Session, Transaction } from 'neo4j-driver';
+import { Driver, Session } from 'neo4j-driver';
+import { Neo4jTransaction } from '@/types/transactions';
 
 export class BrandRepository {
   private neo4jDriver: Driver;
@@ -8,7 +9,7 @@ export class BrandRepository {
     this.neo4jDriver = fastify.neo4j;
   }
 
-  async createBrand(nome: string, tx?: Session | Transaction): Promise<boolean> {
+  async createBrand(nome: string, tx?: Neo4jTransaction): Promise<boolean> {
     const session = tx || this.neo4jDriver.session();
     try {
       const query = 'CREATE (m:Marca {nome: $nome}) RETURN m';
@@ -19,7 +20,7 @@ export class BrandRepository {
     }
   }
 
-  async findByName(nome: string, tx?: Session | Transaction): Promise<{ nome: string } | null> {
+  async findByName(nome: string, tx?: Neo4jTransaction): Promise<{ nome: string } | null> {
     const session = tx || this.neo4jDriver.session();
     try {
       const query = 'MATCH (m:Marca {nome: $nome}) RETURN m';

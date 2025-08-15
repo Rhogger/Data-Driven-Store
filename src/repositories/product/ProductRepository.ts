@@ -9,6 +9,7 @@ import {
   ProductViewData,
   ProductCacheData,
 } from './ProductInterfaces';
+import { MongoSession, Neo4jTransaction } from '@/types/transactions';
 
 export class ProductRepository {
   private mongodb: {
@@ -31,7 +32,7 @@ export class ProductRepository {
 
   // ===== MONGODB OPERATIONS =====
 
-  async create(product: CreateProductInput): Promise<Product> {
+  async create(product: CreateProductInput, mongoSession?: MongoSession): Promise<Product> {
     const productData = {
       ...product,
       reservado: 0,
@@ -40,7 +41,8 @@ export class ProductRepository {
       updated_at: new Date(),
     };
 
-    const result = await this.mongoCollection.insertOne(productData);
+    const options = mongoSession ? { session: mongoSession } : {};
+    const result = await this.mongoCollection.insertOne(productData, options);
     const createdProduct = {
       ...productData,
       _id: result.insertedId,
@@ -73,13 +75,18 @@ export class ProductRepository {
     return null;
   }
 
-  async update(id: string, update: UpdateProductInput): Promise<Product | null> {
+  async update(
+    id: string,
+    update: UpdateProductInput,
+    mongoSession?: MongoSession,
+  ): Promise<Product | null> {
     const updateData = {
       ...update,
       updated_at: new Date(),
     };
 
-    await this.mongoCollection.updateOne({ _id: new ObjectId(id) }, { $set: updateData });
+    const options = mongoSession ? { session: mongoSession } : {};
+    await this.mongoCollection.updateOne({ _id: new ObjectId(id) }, { $set: updateData }, options);
 
     const updatedProduct = await this.findById(id);
 
@@ -106,8 +113,9 @@ export class ProductRepository {
     return products.map((product: any) => this.normalizeProduct(product));
   }
 
-  async delete(id: string): Promise<boolean> {
-    const result = await this.mongoCollection.deleteOne({ _id: new ObjectId(id) });
+  async delete(id: string, mongoSession?: MongoSession): Promise<boolean> {
+    const options = mongoSession ? { session: mongoSession } : {};
+    const result = await this.mongoCollection.deleteOne({ _id: new ObjectId(id) }, options);
 
     if (result.deletedCount > 0) {
       await this.invalidateCache(id);
@@ -188,6 +196,7 @@ export class ProductRepository {
     categoryId: number,
     fieldName: string,
     fieldValue: any,
+    mongoSession?: MongoSession,
   ): Promise<Product[]> {
     const filter = { categorias: categoryId };
     const update = {
@@ -197,13 +206,14 @@ export class ProductRepository {
       },
     };
 
-    const result = await this.mongoCollection.updateMany(filter, update);
+    const options = mongoSession ? { session: mongoSession } : {};
+    const result = await this.mongoCollection.updateMany(filter, update, options);
 
     if (result.modifiedCount === 0) {
       return [];
     }
 
-    const updatedDocs = await this.mongoCollection.find(filter).toArray();
+    const updatedDocs = await this.mongoCollection.find(filter, options).toArray();
 
     const invalidationPromises = updatedDocs.map((doc: any) =>
       this.invalidateCache(doc._id.toString()),
@@ -260,12 +270,12 @@ export class ProductRepository {
 
   // ===== NEO4J OPERATIONS =====
 
-  async createProductNodeNeo4j(product: any, tx?: any): Promise<void> {
+  async createProductNodeNeo4j(productId: string, tx?: Neo4jTransaction): Promise<void> {
     const session = tx || this.neo4jDriver.session();
     try {
       const query = 'CREATE (p:Produto {id_produto: $id_produto}) RETURN p';
       await session.run(query, {
-        id_produto: product.id_produto,
+        id_produto: productId,
       });
     } finally {
       if (!tx) await (session as any).close();
@@ -274,9 +284,9 @@ export class ProductRepository {
 
   async createRelationships(
     productId: string,
-    categoryId: string,
+    categoryId: number,
     brandName: string,
-    tx?: any,
+    tx?: Neo4jTransaction,
   ): Promise<void> {
     const session = tx || this.neo4jDriver.session();
 
@@ -336,6 +346,80 @@ export class ProductRepository {
       return result.records.map((record) => record.get('id'));
     } finally {
       await session.close();
+    }
+  }
+
+  async deleteProductRelationships(productId: string, tx?: Neo4jTransaction): Promise<void> {
+    const session = tx || this.neo4jDriver.session();
+    try {
+      await session.run(
+        `
+        MATCH (p:Produto {id_produto: $productId})-[r]-()
+        DELETE r
+        `,
+        { productId },
+      );
+    } finally {
+      if (!tx) await (session as any).close();
+    }
+  }
+
+  async deleteProductRelationshipsByType(
+    productId: string,
+    relationshipType: 'PERTENCE_A' | 'PRODUZIDO_POR',
+    tx?: Neo4jTransaction,
+  ): Promise<void> {
+    const session = tx || this.neo4jDriver.session();
+    try {
+      await session.run(
+        `
+        MATCH (p:Produto {id_produto: $productId})-[r:${relationshipType}]-()
+        DELETE r
+        `,
+        { productId },
+      );
+    } finally {
+      if (!tx) await (session as any).close();
+    }
+  }
+
+  async createProductCategoryRelationship(
+    productId: string,
+    categoryId: number,
+    tx?: Neo4jTransaction,
+  ): Promise<void> {
+    const session = tx || this.neo4jDriver.session();
+    try {
+      await session.run(
+        `
+        MATCH (p:Produto {id_produto: $productId})
+        MATCH (c:Categoria {id_categoria: $categoryId})
+        MERGE (p)-[:PERTENCE_A]->(c)
+        `,
+        { productId, categoryId },
+      );
+    } finally {
+      if (!tx) await (session as any).close();
+    }
+  }
+
+  async createProductBrandRelationship(
+    productId: string,
+    brandName: string,
+    tx?: Neo4jTransaction,
+  ): Promise<void> {
+    const session = tx || this.neo4jDriver.session();
+    try {
+      await session.run(
+        `
+        MATCH (p:Produto {id_produto: $productId})
+        MATCH (m:Marca {nome: $brandName})
+        MERGE (p)-[:PRODUZIDO_POR]->(m)
+        `,
+        { productId, brandName },
+      );
+    } finally {
+      if (!tx) await (session as any).close();
     }
   }
 
@@ -406,5 +490,23 @@ export class ProductRepository {
   private async clearProductViews(id_produto: string): Promise<void> {
     const viewKey = `visualizacoes:${id_produto}`;
     await this.redis.del(viewKey);
+  }
+
+  // ===== TRANSACTION MANAGEMENT =====
+
+  async startMongoTransaction(): Promise<MongoSession> {
+    const session = this.mongodb.client.startSession();
+    session.startTransaction();
+    return session;
+  }
+
+  async commitMongoTransaction(session: MongoSession): Promise<void> {
+    await session.commitTransaction();
+    await session.endSession();
+  }
+
+  async rollbackMongoTransaction(session: MongoSession): Promise<void> {
+    await session.abortTransaction();
+    await session.endSession();
   }
 }

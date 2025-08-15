@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { ProductRepository } from '@repositories/product/ProductRepository';
 import { BrandRepository } from '@repositories/brand/BrandRepository';
 import { CategoryRepository } from '@repositories/category/CategoryRepository';
+import { MongoSession, Neo4jTransaction } from '@/types/transactions';
 
 export class CreateProductService {
   constructor(
@@ -12,50 +13,52 @@ export class CreateProductService {
   ) {}
 
   async createProductAtomic(productInput: any) {
-    const product = await this.productRepository.create(productInput);
-    const session = this.fastify.neo4j.session();
-    const tx = session.beginTransaction();
+    for (const categoriaId of productInput.categorias) {
+      const categoriaPg = await this.categoryRepository.findById(Number(categoriaId));
+      if (!categoriaPg) throw new Error(`Categoria ${categoriaId} não existe`);
+    }
+
+    const mongoSession: MongoSession = await this.productRepository.startMongoTransaction();
+    const neo4jSession = this.fastify.neo4j.session();
+    const neo4jTx: Neo4jTransaction = neo4jSession.beginTransaction();
+
     try {
-      let brandNode = await this.brandRepository.findByName(product.marca, tx);
+      let brandNode = await this.brandRepository.findByName(productInput.marca, neo4jTx);
       if (!brandNode) {
-        const created = await this.brandRepository.createBrand(product.marca, tx);
-        if (!created) throw new Error('Erro ao criar marca no Neo4j');
-        brandNode = await this.brandRepository.findByName(product.marca, tx);
+        const created = await this.brandRepository.createBrand(productInput.marca, neo4jTx);
+        if (!created) throw new Error('Falha ao criar marca no Neo4j');
+        brandNode = await this.brandRepository.findByName(productInput.marca, neo4jTx);
       }
 
-      for (const categoriaId of product.categorias) {
-        const categoriaNode = await this.categoryRepository.findByIdNeo4j(String(categoriaId), tx);
+      for (const categoriaId of productInput.categorias) {
+        const categoriaNode = await this.categoryRepository.findByIdNeo4j(categoriaId, neo4jTx);
         if (!categoriaNode) {
-          const categoriaPg = await this.categoryRepository.findById(Number(categoriaId));
-          if (!categoriaPg) throw new Error(`Categoria ${categoriaId} não existe`);
-          await this.categoryRepository.createCategoryNode(
-            {
-              id_categoria: String(categoriaPg.id_categoria),
-              nome: categoriaPg.nome,
-            },
-            tx,
-          );
+          await this.categoryRepository.createCategoryNode(categoriaId, neo4jTx);
         }
       }
 
-      await this.productRepository.createProductNodeNeo4j(product, tx);
+      const product = await this.productRepository.create(productInput, mongoSession);
+
+      await this.productRepository.createProductNodeNeo4j(product.id_produto!, neo4jTx);
 
       for (const categoriaId of product.categorias) {
         await this.productRepository.createRelationships(
           product.id_produto!,
-          String(categoriaId),
+          categoriaId,
           brandNode!.nome,
-          tx,
+          neo4jTx,
         );
       }
 
-      await tx.commit();
-      await session.close();
+      await neo4jTx.commit();
+      await neo4jSession.close();
+      await this.productRepository.commitMongoTransaction(mongoSession);
+
       return product;
     } catch (err) {
-      await tx.rollback();
-      await session.close();
-      await this.productRepository.delete(product.id_produto!);
+      await neo4jTx.rollback();
+      await neo4jSession.close();
+      await this.productRepository.rollbackMongoTransaction(mongoSession);
       throw err;
     }
   }

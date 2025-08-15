@@ -17,8 +17,8 @@ export interface CategoryCreateInput {
 // Neo4j Interfaces
 // ============================================================================
 export interface Category {
-  id_categoria: string;
-  nome: string;
+  id_categoria: number;
+  nome?: string;
 }
 
 export interface CreateNodeResult {

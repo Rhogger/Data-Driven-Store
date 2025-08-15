@@ -1,7 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { Pool } from 'pg';
-import { Driver, Session, Transaction } from 'neo4j-driver';
+import { Driver, Session } from 'neo4j-driver';
 import { CategoryRow, CategoryCreateInput, Category, DeleteNodeResult } from './CategoryInterfaces';
+import { Neo4jTransaction } from '@/types/transactions';
 
 export class CategoryRepository {
   private pg: Pool;
@@ -50,20 +51,19 @@ export class CategoryRepository {
   // Neo4j Operations (Relacionamentos e análises)
   // ============================================================================
 
-  async createCategoryNode(category: Category, tx?: Session | Transaction): Promise<void> {
+  async createCategoryNode(categoryId: number, tx?: Neo4jTransaction): Promise<void> {
     const session = tx || this.neo4jDriver.session();
     try {
-      const query = 'CREATE (c:Categoria {id_categoria: $id_categoria, nome: $nome}) RETURN c';
+      const query = 'CREATE (c:Categoria {id_categoria: $id_categoria}) RETURN c';
       await session.run(query, {
-        id_categoria: category.id_categoria,
-        nome: category.nome,
+        id_categoria: categoryId,
       });
     } finally {
       if (!tx) await (session as Session).close();
     }
   }
 
-  async deleteCategoryNode(id_categoria: string): Promise<DeleteNodeResult> {
+  async deleteCategoryNode(categoryId: number): Promise<DeleteNodeResult> {
     const session: Session = this.neo4jDriver.session();
 
     try {
@@ -73,7 +73,7 @@ export class CategoryRepository {
         RETURN count(p) as produto_count
       `;
 
-      const checkResult = await session.run(checkQuery, { id_categoria });
+      const checkResult = await session.run(checkQuery, { id_categoria: categoryId });
 
       if (checkResult.records.length > 0) {
         const produtoCount = checkResult.records[0].get('produto_count').toNumber();
@@ -93,7 +93,7 @@ export class CategoryRepository {
         RETURN count(c) as deleted_count
       `;
 
-      const deleteResult = await session.run(deleteQuery, { id_categoria });
+      const deleteResult = await session.run(deleteQuery, { id_categoria: categoryId });
 
       if (deleteResult.records.length > 0) {
         const deletedCount = deleteResult.records[0].get('deleted_count').toNumber();
@@ -123,16 +123,15 @@ export class CategoryRepository {
     }
   }
 
-  async findByIdNeo4j(id_categoria: string, tx?: Session | Transaction): Promise<Category | null> {
+  async findByIdNeo4j(categoryId: number, tx?: Neo4jTransaction): Promise<Category | null> {
     const session = tx || this.neo4jDriver.session();
     try {
       const query = 'MATCH (c:Categoria {id_categoria: $id_categoria}) RETURN c';
-      const result = await session.run(query, { id_categoria });
+      const result = await session.run(query, { id_categoria: categoryId });
       if (result.records.length > 0) {
         const catNode = result.records[0].get('c').properties;
         return {
           id_categoria: catNode.id_categoria,
-          nome: catNode.nome,
         };
       }
       return null;
